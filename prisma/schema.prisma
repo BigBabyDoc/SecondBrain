@@ -15,11 +15,15 @@ enum Role {
   ADMIN
 }
 
-/// Порядок важен: индекс тарифа используется для проверки доступа (PRO >= BASIC >= FREE)
+/// Порядок важен: индекс тарифа используется для проверки доступа (PAID >= FREE)
 enum Tier {
   FREE
-  BASIC
-  PRO
+  PAID
+}
+
+enum BillingPeriod {
+  MONTHLY
+  YEARLY
 }
 
 enum SubscriptionStatus {
@@ -54,6 +58,7 @@ model Subscription {
   userId             String             @unique
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier               Tier               @default(FREE)
+  period             BillingPeriod?
   status             SubscriptionStatus @default(ACTIVE)
   currentPeriodEnd   DateTime?
   yookassaMethodId   String?
@@ -66,6 +71,7 @@ model Payment {
   userId          String
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier            Tier
+  period          BillingPeriod
   amount          Decimal       @db.Decimal(10, 2)
   currency        String        @default("RUB")
   status          PaymentStatus @default(PENDING)

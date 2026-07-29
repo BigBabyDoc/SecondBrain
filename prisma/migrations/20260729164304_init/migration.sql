@@ -2,7 +2,10 @@
 CREATE TYPE "Role" AS ENUM ('DOCTOR', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "Tier" AS ENUM ('FREE', 'BASIC', 'PRO');
+CREATE TYPE "Tier" AS ENUM ('FREE', 'PAID');
+
+-- CreateEnum
+CREATE TYPE "BillingPeriod" AS ENUM ('MONTHLY', 'YEARLY');
 
 -- CreateEnum
 CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'PENDING', 'CANCELED', 'EXPIRED');
@@ -28,6 +31,7 @@ CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "tier" "Tier" NOT NULL DEFAULT 'FREE',
+    "period" "BillingPeriod",
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIVE',
     "currentPeriodEnd" TIMESTAMP(3),
     "yookassaMethodId" TEXT,
@@ -42,6 +46,7 @@ CREATE TABLE "Payment" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "tier" "Tier" NOT NULL,
+    "period" "BillingPeriod" NOT NULL,
     "amount" DECIMAL(10,2) NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'RUB',
     "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',

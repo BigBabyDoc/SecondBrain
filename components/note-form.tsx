@@ -7,7 +7,7 @@ type NoteFormValues = {
   title: string;
   excerpt: string;
   content: string;
-  tier: "FREE" | "BASIC" | "PRO";
+  tier: "FREE" | "PAID";
   tags: string;
   published: boolean;
 };
@@ -69,8 +69,7 @@ export function NoteForm({
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none focus:border-brand-blue"
           >
             <option value="FREE">Бесплатно</option>
-            <option value="BASIC">Basic</option>
-            <option value="PRO">Pro</option>
+            <option value="PAID">Полный доступ</option>
           </select>
         </div>
         <div>

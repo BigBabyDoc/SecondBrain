@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchYookassaPayment } from "@/lib/yookassa";
-import { TierName } from "@/lib/access";
+import { BillingPeriod, PLAN_DURATION_DAYS } from "@/lib/access";
 
 // ЮKassa не подписывает вебхуки, поэтому мы никогда не доверяем телу запроса напрямую:
 // после уведомления перезапрашиваем статус платежа по API своим секретным ключом.
@@ -30,9 +30,9 @@ export async function POST(request: Request) {
 
   if (payment.status === "succeeded" && payment.paid) {
     if (existing.status !== "SUCCEEDED") {
-      const tier = (payment.metadata?.tier as TierName) ?? existing.tier;
+      const period = (payment.metadata?.period as BillingPeriod) ?? existing.period;
       const periodEnd = new Date();
-      periodEnd.setDate(periodEnd.getDate() + 30);
+      periodEnd.setDate(periodEnd.getDate() + PLAN_DURATION_DAYS[period]);
 
       await prisma.$transaction([
         prisma.payment.update({
@@ -43,13 +43,15 @@ export async function POST(request: Request) {
           where: { userId: existing.userId },
           create: {
             userId: existing.userId,
-            tier,
+            tier: "PAID",
+            period,
             status: "ACTIVE",
             currentPeriodEnd: periodEnd,
             yookassaMethodId: payment.payment_method?.id,
           },
           update: {
-            tier,
+            tier: "PAID",
+            period,
             status: "ACTIVE",
             currentPeriodEnd: periodEnd,
             yookassaMethodId: payment.payment_method?.id,

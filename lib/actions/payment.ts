@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createYookassaPayment } from "@/lib/yookassa";
-import { TierName } from "@/lib/access";
+import { BillingPeriod } from "@/lib/access";
 
-export async function createPaymentAction(tier: TierName) {
+export async function createPaymentAction(period: BillingPeriod) {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
@@ -16,14 +16,15 @@ export async function createPaymentAction(tier: TierName) {
 
   const payment = await createYookassaPayment({
     userId: session.user.id,
-    tier,
+    period,
     returnUrl: `${baseUrl}/account?payment=pending`,
   });
 
   await prisma.payment.create({
     data: {
       userId: session.user.id,
-      tier,
+      tier: "PAID",
+      period,
       amount: payment.amount.value,
       currency: payment.amount.currency,
       status: "PENDING",

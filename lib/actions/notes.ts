@@ -19,7 +19,7 @@ const noteSchema = z.object({
   title: z.string().min(3, "Заголовок слишком короткий"),
   excerpt: z.string().min(3, "Добавьте краткое описание"),
   content: z.string().min(10, "Текст заметки слишком короткий"),
-  tier: z.enum(["FREE", "BASIC", "PRO"]),
+  tier: z.enum(["FREE", "PAID"]),
   tags: z.string(),
   published: z.string().optional(),
 });

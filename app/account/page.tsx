@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { TIER_LABELS, TIER_ORDER, TierName } from "@/lib/access";
+import { BILLING_PERIODS, BillingPeriod, PLAN_LABELS, TIER_LABELS, TierName } from "@/lib/access";
 import { UpgradeButton } from "@/components/upgrade-button";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -24,9 +24,7 @@ export default async function AccountPage() {
   ]);
 
   const currentTier = (subscription?.tier as TierName) ?? "FREE";
-  const upgradeTiers = TIER_ORDER.filter(
-    (t) => TIER_ORDER.indexOf(t) > TIER_ORDER.indexOf(currentTier)
-  );
+  const currentPeriod = (subscription?.period as BillingPeriod | null) ?? null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
@@ -38,7 +36,10 @@ export default async function AccountPage() {
         <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
           <div>
             <p className="text-muted">Тариф</p>
-            <p className="text-base font-medium">{TIER_LABELS[currentTier]}</p>
+            <p className="text-base font-medium">
+              {TIER_LABELS[currentTier]}
+              {currentPeriod && ` · ${PLAN_LABELS[currentPeriod]}`}
+            </p>
           </div>
           <div>
             <p className="text-muted">Статус</p>
@@ -56,13 +57,13 @@ export default async function AccountPage() {
           )}
         </div>
 
-        {upgradeTiers.length > 0 && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {upgradeTiers.map((tier) => (
-              <UpgradeButton key={tier} tier={tier} />
-            ))}
-          </div>
-        )}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {BILLING_PERIODS.filter(
+            (period) => !(currentTier === "PAID" && currentPeriod === period)
+          ).map((period) => (
+            <UpgradeButton key={period} period={period} />
+          ))}
+        </div>
       </section>
 
       <section className="mt-8">
@@ -86,7 +87,9 @@ export default async function AccountPage() {
                     <td className="px-4 py-2">
                       {new Date(p.createdAt).toLocaleDateString("ru-RU")}
                     </td>
-                    <td className="px-4 py-2">{TIER_LABELS[p.tier as TierName]}</td>
+                    <td className="px-4 py-2">
+                      {TIER_LABELS[p.tier as TierName]} · {PLAN_LABELS[p.period as BillingPeriod]}
+                    </td>
                     <td className="px-4 py-2">
                       {p.amount.toString()} {p.currency}
                     </td>

@@ -5,8 +5,7 @@ import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
 
 const TIER_BADGE_CLASS: Record<TierName, string> = {
   FREE: "bg-brand-green/15 text-brand-green",
-  BASIC: "bg-brand-blue/15 text-brand-blue",
-  PRO: "bg-amber-400/15 text-amber-400",
+  PAID: "bg-brand-blue/15 text-brand-blue",
 };
 
 export default async function NotesPage({

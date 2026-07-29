@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { TIER_LABELS, TIER_PRICES, TierName } from "@/lib/access";
+import { PLAN_LABELS, PLAN_PRICES, BillingPeriod } from "@/lib/access";
 
 const API_BASE = "https://api.yookassa.ru/v3";
 
@@ -26,10 +26,10 @@ export type YookassaPayment = {
 
 export async function createYookassaPayment(params: {
   userId: string;
-  tier: TierName;
+  period: BillingPeriod;
   returnUrl: string;
 }): Promise<YookassaPayment> {
-  const amount = TIER_PRICES[params.tier].toFixed(2);
+  const amount = PLAN_PRICES[params.period].toFixed(2);
 
   const res = await fetch(`${API_BASE}/payments`, {
     method: "POST",
@@ -46,8 +46,8 @@ export async function createYookassaPayment(params: {
         type: "redirect",
         return_url: params.returnUrl,
       },
-      description: `Подписка «${TIER_LABELS[params.tier]}» — Второй мозг педиатра`,
-      metadata: { userId: params.userId, tier: params.tier },
+      description: `Подписка «${PLAN_LABELS[params.period]}» — Второй мозг педиатра`,
+      metadata: { userId: params.userId, period: params.period },
     }),
   });
 

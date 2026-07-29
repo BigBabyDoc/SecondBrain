@@ -36,7 +36,7 @@ export default async function EditNotePage({
           title: note.title,
           excerpt: note.excerpt,
           content: note.content,
-          tier: note.tier as "FREE" | "BASIC" | "PRO",
+          tier: note.tier as "FREE" | "PAID",
           tags: note.tags.join(", "),
           published: note.published,
         }}

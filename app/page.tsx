@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { TIER_LABELS, TIER_PRICES, TIER_DESCRIPTIONS, TierName } from "@/lib/access";
+import { BILLING_PERIODS, PLAN_LABELS, PLAN_PRICES } from "@/lib/access";
 
 export default async function HomePage() {
   const freeNotes = await prisma.note.findMany({
@@ -9,14 +9,12 @@ export default async function HomePage() {
     take: 3,
   });
 
-  const tiers: TierName[] = ["FREE", "BASIC", "PRO"];
-
   return (
     <div>
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-widest text-brand-green">
-            Для педиатров и врачей-коллег
+            Заметки для ежедневной практики
           </p>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             Второй мозг педиатра
@@ -71,24 +69,40 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <h2 className="mb-8 text-center text-2xl font-semibold">Тарифы</h2>
           <div className="grid gap-6 sm:grid-cols-3">
-            {tiers.map((tier) => (
+            <div className="flex flex-col rounded-2xl border border-border bg-background p-6">
+              <h3 className="text-lg font-semibold">Бесплатно</h3>
+              <p className="mt-2 text-3xl font-bold">0 ₽</p>
+              <p className="mt-3 flex-1 text-sm text-muted">
+                Часть заметок в открытом доступе — можно оценить качество и стиль подачи.
+              </p>
+              <Link
+                href="/register"
+                className="mt-6 rounded-full border border-border py-2 text-center text-sm font-medium hover:border-brand-blue hover:text-brand-blue"
+              >
+                Начать бесплатно
+              </Link>
+            </div>
+            {BILLING_PERIODS.map((period) => (
               <div
-                key={tier}
+                key={period}
                 className="flex flex-col rounded-2xl border border-border bg-background p-6"
               >
-                <h3 className="text-lg font-semibold">{TIER_LABELS[tier]}</h3>
+                <h3 className="text-lg font-semibold">Полный доступ · {PLAN_LABELS[period]}</h3>
                 <p className="mt-2 text-3xl font-bold">
-                  {TIER_PRICES[tier] === 0 ? "0 ₽" : `${TIER_PRICES[tier]} ₽`}
-                  {TIER_PRICES[tier] > 0 && (
-                    <span className="text-base font-normal text-muted"> / мес</span>
-                  )}
+                  {PLAN_PRICES[period]} ₽
+                  <span className="text-base font-normal text-muted">
+                    {" "}
+                    / {period === "MONTHLY" ? "мес" : "год"}
+                  </span>
                 </p>
-                <p className="mt-3 flex-1 text-sm text-muted">{TIER_DESCRIPTIONS[tier]}</p>
+                <p className="mt-3 flex-1 text-sm text-muted">
+                  Вся библиотека клинических заметок, протоколов и разборов случаев.
+                </p>
                 <Link
-                  href={tier === "FREE" ? "/register" : "/pricing"}
+                  href="/pricing"
                   className="mt-6 rounded-full border border-border py-2 text-center text-sm font-medium hover:border-brand-blue hover:text-brand-blue"
                 >
-                  {tier === "FREE" ? "Начать бесплатно" : "Подробнее"}
+                  Подробнее
                 </Link>
               </div>
             ))}
