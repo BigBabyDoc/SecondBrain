@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { registerAction, RegisterState } from "@/lib/actions/auth";
 
@@ -48,6 +49,24 @@ export function RegisterForm() {
           className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none focus:border-brand-blue"
         />
       </div>
+      <label className="flex items-start gap-2 text-sm text-muted">
+        <input
+          type="checkbox"
+          name="consent"
+          required
+          className="mt-0.5"
+        />
+        <span>
+          Согласен с{" "}
+          <Link href="/oferta" className="text-brand-blue hover:underline">
+            публичной офертой
+          </Link>{" "}
+          и{" "}
+          <Link href="/privacy" className="text-brand-blue hover:underline">
+            политикой обработки персональных данных
+          </Link>
+        </span>
+      </label>
       {state.error && <p className="text-sm text-red-400">{state.error}</p>}
       <button
         type="submit"

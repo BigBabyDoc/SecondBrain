@@ -10,9 +10,14 @@ export function SiteFooter() {
           © {new Date().getFullYear()} Второй мозг педиатра. Материалы носят справочный характер
           и не заменяют консультацию врача.
         </p>
-        <Link href="/oferta" className="text-xs hover:text-foreground hover:underline">
-          Публичная оферта
-        </Link>
+        <div className="flex gap-4 text-xs">
+          <Link href="/oferta" className="hover:text-foreground hover:underline">
+            Публичная оферта
+          </Link>
+          <Link href="/privacy" className="hover:text-foreground hover:underline">
+            Политика конфиденциальности
+          </Link>
+        </div>
       </div>
     </footer>
   );

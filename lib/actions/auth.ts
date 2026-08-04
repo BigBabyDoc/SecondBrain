@@ -9,6 +9,9 @@ const registerSchema = z.object({
   name: z.string().min(2, "Укажите имя"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+  consent: z.literal("on", {
+    message: "Нужно согласиться с офертой и политикой обработки персональных данных",
+  }),
 });
 
 export type RegisterState = {
@@ -23,6 +26,7 @@ export async function registerAction(
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
+    consent: formData.get("consent"),
   });
 
   if (!parsed.success) {
