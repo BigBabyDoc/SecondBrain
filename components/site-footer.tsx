@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-border py-8 text-sm text-muted">
@@ -8,6 +10,9 @@ export function SiteFooter() {
           © {new Date().getFullYear()} Второй мозг педиатра. Материалы носят справочный характер
           и не заменяют консультацию врача.
         </p>
+        <Link href="/oferta" className="text-xs hover:text-foreground hover:underline">
+          Публичная оферта
+        </Link>
       </div>
     </footer>
   );

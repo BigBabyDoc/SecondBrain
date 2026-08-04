@@ -26,10 +26,12 @@ export type YookassaPayment = {
 
 export async function createYookassaPayment(params: {
   userId: string;
+  userEmail: string;
   period: BillingPeriod;
   returnUrl: string;
 }): Promise<YookassaPayment> {
   const amount = PLAN_PRICES[params.period].toFixed(2);
+  const description = `Подписка «${PLAN_LABELS[params.period]}» — Второй мозг педиатра`;
 
   const res = await fetch(`${API_BASE}/payments`, {
     method: "POST",
@@ -46,8 +48,26 @@ export async function createYookassaPayment(params: {
         type: "redirect",
         return_url: params.returnUrl,
       },
-      description: `Подписка «${PLAN_LABELS[params.period]}» — Второй мозг педиатра`,
+      description,
       metadata: { userId: params.userId, period: params.period },
+      // Автоформирование чека для самозанятого (НПД) через "Мой налог".
+      // Требует включённой отправки чеков в личном кабинете ЮKassa (раздел
+      // «Отправка чеков» → авторизация в «Мой налог»). Само ФИО/ИНН
+      // самозанятого нигде в API не передаётся — оно привязано к магазину
+      // на стороне ЮKassa/«Мой налог» при подключении.
+      receipt: {
+        customer: { email: params.userEmail },
+        items: [
+          {
+            description,
+            quantity: "1.00",
+            amount: { value: amount, currency: "RUB" },
+            vat_code: 1,
+            payment_mode: "full_payment",
+            payment_subject: "service",
+          },
+        ],
+      },
     }),
   });
 

@@ -11,11 +11,15 @@ export async function createPaymentAction(period: BillingPeriod) {
   if (!session?.user) {
     redirect("/login");
   }
+  if (!session.user.email) {
+    throw new Error("У аккаунта не указан email — нужен для формирования чека");
+  }
 
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
   const payment = await createYookassaPayment({
     userId: session.user.id,
+    userEmail: session.user.email,
     period,
     returnUrl: `${baseUrl}/account?payment=pending`,
   });
