@@ -3,19 +3,38 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
 
+export const metadata = {
+  title: "Заметки — Второй мозг педиатра",
+  description:
+    "Каталог клинических заметок педиатра: протоколы, дозировки, разборы случаев. Часть материалов открыта бесплатно.",
+};
+
+const PAGE_SIZE = 12;
+
 const TIER_BADGE_CLASS: Record<TierName, string> = {
   FREE: "bg-brand-green/15 text-brand-green",
   PAID: "bg-brand-blue/15 text-brand-blue",
 };
 
+/** Ссылка на страницу каталога с сохранением активных фильтров. */
+function buildHref(params: { q: string; tag: string; page: number }): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.tag) search.set("tag", params.tag);
+  if (params.page > 1) search.set("page", String(params.page));
+  const qs = search.toString();
+  return qs ? `/notes?${qs}` : "/notes";
+}
+
 export default async function NotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string }>;
+  searchParams: Promise<{ q?: string; tag?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const tag = params.tag?.trim() ?? "";
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const session = await auth();
   let userTier: TierName = "FREE";
@@ -26,23 +45,33 @@ export default async function NotesPage({
     userTier = (subscription?.tier as TierName) ?? "FREE";
   }
 
-  const notes = await prisma.note.findMany({
-    where: {
-      published: true,
-      ...(q
-        ? {
-            OR: [
-              { title: { contains: q, mode: "insensitive" } },
-              { excerpt: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-      ...(tag ? { tags: { has: tag } } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const where = {
+    published: true,
+    ...(q
+      ? {
+          OR: [
+            { title: { contains: q, mode: "insensitive" as const } },
+            { excerpt: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+    ...(tag ? { tags: { has: tag } } : {}),
+  };
 
-  const allTags = Array.from(new Set(notes.flatMap((n) => n.tags))).sort();
+  const [notes, total, tagSource] = await Promise.all([
+    prisma.note.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.note.count({ where }),
+    // Облако тегов строится по всей библиотеке, а не по текущей странице.
+    prisma.note.findMany({ where: { published: true }, select: { tags: true } }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const allTags = Array.from(new Set(tagSource.flatMap((n) => n.tags))).sort();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
@@ -72,7 +101,7 @@ export default async function NotesPage({
       {allTags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2 text-xs">
           <Link
-            href="/notes"
+            href={buildHref({ q, tag: "", page: 1 })}
             className={`rounded-full border px-3 py-1 ${
               !tag ? "border-brand-blue text-brand-blue" : "border-border text-muted"
             }`}
@@ -82,7 +111,7 @@ export default async function NotesPage({
           {allTags.map((t) => (
             <Link
               key={t}
-              href={`/notes?tag=${encodeURIComponent(t)}`}
+              href={buildHref({ q, tag: t, page: 1 })}
               className={`rounded-full border px-3 py-1 ${
                 tag === t ? "border-brand-blue text-brand-blue" : "border-border text-muted"
               }`}
@@ -110,7 +139,7 @@ export default async function NotesPage({
                 </span>
                 {locked && <span className="text-muted">🔒</span>}
               </div>
-              <h3 className="mt-2 font-semibold">{note.title}</h3>
+              <h2 className="mt-2 font-semibold">{note.title}</h2>
               <p className="mt-2 text-sm text-muted line-clamp-3">{note.excerpt}</p>
               {note.tags.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -126,8 +155,43 @@ export default async function NotesPage({
         })}
       </div>
 
-      {notes.length === 0 && (
-        <p className="mt-8 text-center text-muted">Ничего не найдено.</p>
+      {notes.length === 0 && <p className="mt-8 text-center text-muted">Ничего не найдено.</p>}
+
+      {totalPages > 1 && (
+        <nav
+          aria-label="Постраничная навигация"
+          className="mt-10 flex items-center justify-center gap-3 text-sm"
+        >
+          {page > 1 ? (
+            <Link
+              href={buildHref({ q, tag, page: page - 1 })}
+              className="rounded-lg border border-border px-4 py-2 hover:border-brand-blue"
+            >
+              ← Назад
+            </Link>
+          ) : (
+            <span className="rounded-lg border border-border px-4 py-2 text-muted opacity-50">
+              ← Назад
+            </span>
+          )}
+
+          <span className="text-muted">
+            Стр. {page} из {totalPages}
+          </span>
+
+          {page < totalPages ? (
+            <Link
+              href={buildHref({ q, tag, page: page + 1 })}
+              className="rounded-lg border border-border px-4 py-2 hover:border-brand-blue"
+            >
+              Вперёд →
+            </Link>
+          ) : (
+            <span className="rounded-lg border border-border px-4 py-2 text-muted opacity-50">
+              Вперёд →
+            </span>
+          )}
+        </nav>
       )}
     </div>
   );

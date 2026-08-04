@@ -22,7 +22,10 @@ export function SiteFooter() {
           Кузнецов Валерий Каренович (самозанятый), ИНН 231714600779. Email:{" "}
           Valeriy_Kuznetsov_02@mail.ru
         </p>
-        <div className="flex gap-4 text-xs">
+        <div className="flex flex-wrap justify-center gap-4 text-xs">
+          <Link href="/faq" className="hover:text-foreground hover:underline">
+            Вопросы и ответы
+          </Link>
           <Link href="/oferta" className="hover:text-foreground hover:underline">
             Публичная оферта
           </Link>

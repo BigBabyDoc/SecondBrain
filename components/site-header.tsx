@@ -1,12 +1,27 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { Logo } from "@/components/logo";
+import { MobileNav, MobileNavLink } from "@/components/mobile-nav";
 
 export async function SiteHeader() {
   const session = await auth();
 
+  const links: MobileNavLink[] = [
+    { href: "/notes", label: "Заметки" },
+    { href: "/pricing", label: "Тарифы" },
+    { href: "/faq", label: "Вопросы и ответы" },
+  ];
+  if (session?.user.role === "ADMIN") {
+    links.push({ href: "/admin/notes", label: "Админка" });
+  }
+  if (session?.user) {
+    links.push({ href: "/account", label: "Личный кабинет" });
+  } else {
+    links.push({ href: "/register", label: "Регистрация" });
+  }
+
   return (
-    <header className="border-b border-border bg-background-elevated/60 backdrop-blur">
+    <header className="relative border-b border-border bg-background-elevated/60 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="shrink-0">
           <Logo />
@@ -18,6 +33,9 @@ export async function SiteHeader() {
           </Link>
           <Link href="/pricing" className="hover:text-foreground">
             Тарифы
+          </Link>
+          <Link href="/faq" className="hover:text-foreground">
+            Вопросы
           </Link>
           {session?.user.role === "ADMIN" && (
             <Link href="/admin/notes" className="hover:text-foreground">
@@ -48,20 +66,18 @@ export async function SiteHeader() {
             </>
           ) : (
             <>
-              <Link
-                href="/login"
-                className="text-sm text-muted hover:text-foreground"
-              >
+              <Link href="/login" className="text-sm text-muted hover:text-foreground">
                 Войти
               </Link>
               <Link
                 href="/register"
-                className="rounded-full bg-brand-blue px-4 py-1.5 text-sm font-medium text-[#0a1220] hover:opacity-90"
+                className="hidden rounded-full bg-brand-blue px-4 py-1.5 text-sm font-medium text-[#0a1220] hover:opacity-90 sm:inline-block"
               >
                 Регистрация
               </Link>
             </>
           )}
+          <MobileNav links={links} />
         </div>
       </div>
     </header>

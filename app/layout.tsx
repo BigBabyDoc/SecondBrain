@@ -15,9 +15,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Второй мозг педиатра — медицинские заметки по подписке",
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
+  title: {
+    default: "Второй мозг педиатра — медицинские заметки по подписке",
+    template: "%s",
+  },
   description:
     "Клинические заметки для педиатров и врачей: быстро, удобно, достоверно. Часть материалов доступна бесплатно.",
+  openGraph: {
+    siteName: "Второй мозг педиатра",
+    locale: "ru_RU",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

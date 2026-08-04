@@ -1,8 +1,34 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
+import { Markdown } from "@/components/markdown";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const note = await prisma.note.findUnique({ where: { slug } });
+
+  if (!note || !note.published) {
+    return { title: "Заметка не найдена — Второй мозг педиатра" };
+  }
+
+  return {
+    title: `${note.title} — Второй мозг педиатра`,
+    description: note.excerpt,
+    keywords: note.tags,
+    openGraph: {
+      title: note.title,
+      description: note.excerpt,
+      type: "article",
+    },
+  };
+}
 
 export default async function NoteDetailPage({
   params,
@@ -54,9 +80,7 @@ export default async function NoteDetailPage({
       <div className="mt-8 border-t border-border pt-8">
         {hasAccess ? (
           <>
-            <div className="max-w-none whitespace-pre-wrap leading-relaxed text-[15px]">
-              {note.content}
-            </div>
+            <Markdown>{note.content}</Markdown>
             <p className="mt-8 rounded-xl border border-border bg-background-elevated/40 p-4 text-xs text-muted">
               ⚠️ Информация носит справочный характер, основана на общих клинических
               рекомендациях и не заменяет решение лечащего врача с учётом конкретного пациента.

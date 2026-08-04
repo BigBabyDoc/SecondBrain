@@ -15,6 +15,16 @@ export async function createPaymentAction(period: BillingPeriod) {
     throw new Error("У аккаунта не указан email — нужен для формирования чека");
   }
 
+  // Чек по платежу уходит на email, поэтому адрес должен быть подтверждён:
+  // иначе фискальный документ уйдёт на адрес, доступ к которому не проверен.
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { emailVerified: true },
+  });
+  if (!user?.emailVerified) {
+    redirect("/account?payment=unverified");
+  }
+
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
   const payment = await createYookassaPayment({

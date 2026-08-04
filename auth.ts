@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { clearAttempts, isRateLimited, recordFailedAttempt } from "@/lib/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
@@ -15,15 +16,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: {},
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
+        const rawEmail = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
+        if (!rawEmail || !password) return null;
+
+        const email = rawEmail.toLowerCase();
+
+        // Слишком много неудачных попыток по этому адресу — не проверяем пароль вовсе.
+        if (await isRateLimited(email)) return null;
 
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
+        if (!user) {
+          await recordFailedAttempt(email);
+          return null;
+        }
 
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          await recordFailedAttempt(email);
+          return null;
+        }
+
+        await clearAttempts(email);
 
         return {
           id: user.id,

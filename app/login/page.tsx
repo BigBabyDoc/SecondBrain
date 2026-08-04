@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { LoginForm } from "@/components/login-form";
 
+export const metadata = {
+  title: "Вход — Второй мозг педиатра",
+  description: "Вход в личный кабинет сервиса «Второй мозг педиатра».",
+};
+
 export default async function LoginPage({
   searchParams,
 }: {

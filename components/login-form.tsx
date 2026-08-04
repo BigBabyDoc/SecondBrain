@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { loginAction, LoginState } from "@/lib/actions/login";
 
@@ -35,6 +36,11 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           required
           className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none focus:border-brand-blue"
         />
+      </div>
+      <div className="text-right">
+        <Link href="/forgot-password" className="text-sm text-muted hover:text-brand-blue">
+          Забыли пароль?
+        </Link>
       </div>
       {state.error && <p className="text-sm text-red-400">{state.error}</p>}
       <button

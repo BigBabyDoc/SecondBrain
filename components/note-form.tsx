@@ -50,7 +50,12 @@ export function NoteForm({
       </div>
 
       <div>
-        <label className="block text-sm text-muted">Текст заметки</label>
+        <label className="block text-sm text-muted">
+          Текст заметки{" "}
+          <span className="text-xs">
+            (markdown: **жирный**, ## заголовок, - список, | таблицы |)
+          </span>
+        </label>
         <textarea
           name="content"
           defaultValue={defaultValues?.content}

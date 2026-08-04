@@ -11,6 +11,12 @@ import {
 } from "@/lib/access";
 import { UpgradeButton } from "@/components/upgrade-button";
 
+export const metadata = {
+  title: "Тарифы — Второй мозг педиатра",
+  description:
+    "Бесплатный доступ к части заметок, полная библиотека — 490 ₽ в месяц или 4900 ₽ за год.",
+};
+
 const FREE_FEATURES = [
   "Доступ к бесплатным заметкам",
   "Регистрация за 30 секунд",

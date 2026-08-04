@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchYookassaPayment } from "@/lib/yookassa";
 import { BillingPeriod, PLAN_DURATION_DAYS } from "@/lib/access";
+import { sendPaymentSuccessEmail } from "@/lib/emails";
 
 // ЮKassa не подписывает вебхуки, поэтому мы никогда не доверяем телу запроса напрямую:
 // после уведомления перезапрашиваем статус платежа по API своим секретным ключом.
@@ -58,6 +59,16 @@ export async function POST(request: Request) {
           },
         }),
       ]);
+
+      const user = await prisma.user.findUnique({ where: { id: existing.userId } });
+      if (user) {
+        await sendPaymentSuccessEmail({
+          to: user.email,
+          name: user.name,
+          period,
+          periodEnd,
+        });
+      }
     }
   } else if (payment.status === "canceled" && existing.status === "PENDING") {
     await prisma.payment.update({

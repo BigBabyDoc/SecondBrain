@@ -40,17 +40,55 @@ enum PaymentStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         Role     @default(DOCTOR)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          Role      @default(DOCTOR)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  subscription Subscription?
-  payments     Payment[]
-  notes        Note[]         @relation("NoteAuthor")
+  subscription       Subscription?
+  payments           Payment[]
+  notes              Note[]                   @relation("NoteAuthor")
+  passwordResets     PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+}
+
+/// Токены одноразовые: хранится только SHA-256 хеш, сам токен уходит пользователю в письме.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// Неудачные попытки входа для защиты от подбора пароля.
+/// identifier — нормализованный email или IP-адрес.
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  identifier String
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt])
 }
 
 model Subscription {
