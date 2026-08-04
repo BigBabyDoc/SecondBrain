@@ -53,9 +53,17 @@ export default async function NoteDetailPage({
 
       <div className="mt-8 border-t border-border pt-8">
         {hasAccess ? (
-          <div className="max-w-none whitespace-pre-wrap leading-relaxed text-[15px]">
-            {note.content}
-          </div>
+          <>
+            <div className="max-w-none whitespace-pre-wrap leading-relaxed text-[15px]">
+              {note.content}
+            </div>
+            <p className="mt-8 rounded-xl border border-border bg-background-elevated/40 p-4 text-xs text-muted">
+              ⚠️ Информация носит справочный характер, основана на общих клинических
+              рекомендациях и не заменяет решение лечащего врача с учётом конкретного пациента.
+              Автор не несёт ответственности за использование материалов без клинической
+              проверки.
+            </p>
+          </>
         ) : (
           <div className="rounded-2xl border border-border bg-background-elevated p-8 text-center">
             <p className="text-lg font-semibold">
