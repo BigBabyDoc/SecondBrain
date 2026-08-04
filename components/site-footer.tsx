@@ -20,7 +20,7 @@ export function SiteFooter() {
         </p>
         <p className="text-xs">
           Кузнецов Валерий Каренович (самозанятый), ИНН 231714600779. Email:{" "}
-          Valeriy_Kuznetsov_02@mail.ru
+          second_brain_pediatra@mail.ru
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-xs">
           <Link href="/faq" className="hover:text-foreground hover:underline">
