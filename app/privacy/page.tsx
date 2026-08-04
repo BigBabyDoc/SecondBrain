@@ -22,7 +22,7 @@ export default function PrivacyPage() {
             <br />
             ИНН: 231714600779.
             <br />
-            Email для обращений: Valeriy_Kuznetsov_02@mail.ru
+            Email для обращений: Second_Brain_Pediatra@mail.ru
           </p>
         </section>
 
