@@ -53,7 +53,8 @@ export function NoteForm({
         <label className="block text-sm text-muted">
           Текст заметки{" "}
           <span className="text-xs">
-            (markdown: **жирный**, ## заголовок, - список, | таблицы |)
+            (markdown: **жирный**, - список, | таблицы |. Заголовки # ## ### #### —
+            из них собирается «Содержание», цвет зависит от уровня)
           </span>
         </label>
         <textarea
