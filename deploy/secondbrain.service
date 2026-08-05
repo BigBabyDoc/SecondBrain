@@ -1,0 +1,30 @@
+# /etc/systemd/system/secondbrain.service
+# sudo systemctl enable --now secondbrain
+
+[Unit]
+Description=Второй мозг педиатра — веб-приложение
+After=network.target
+
+[Service]
+Type=simple
+User=app
+WorkingDirectory=/home/app/secondbrain
+EnvironmentFile=/home/app/secondbrain/.env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+# Приложение слушает только localhost — наружу его публикует Caddy.
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+Environment=NODE_ENV=production
+
+# Ограничения: процессу не нужен доступ к чужим каталогам и повышение прав
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/app/secondbrain/.next
+
+[Install]
+WantedBy=multi-user.target

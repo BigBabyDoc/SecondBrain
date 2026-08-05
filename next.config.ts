@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Сборка в самодостаточный сервер: на прод уезжает только нужный код,
+  // без полного node_modules.
+  output: "standalone",
 };
 
 export default nextConfig;

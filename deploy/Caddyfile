@@ -1,0 +1,27 @@
+# /etc/caddy/Caddyfile
+# Замените example.ru на свой домен. Caddy сам выпустит и будет продлевать
+# сертификат Let's Encrypt — отдельный certbot не нужен.
+
+example.ru {
+	reverse_proxy 127.0.0.1:3000
+
+	encode gzip zstd
+
+	header {
+		# HSTS: браузер запомнит, что на сайт можно ходить только по HTTPS
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file /var/log/caddy/secondbrain.log
+		# В логи не должны попадать токены из ссылок подтверждения и сброса пароля
+		format filter {
+			request>uri query {
+				delete token
+			}
+		}
+	}
+}
