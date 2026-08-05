@@ -1,0 +1,13 @@
+# /etc/systemd/system/secondbrain-cron.timer
+# sudo systemctl enable --now secondbrain-cron.timer
+
+[Unit]
+Description=Ежедневный запуск задачи по подпискам
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+# Если сервер был выключен в момент запуска — задача выполнится после старта
+Persistent=true
+
+[Install]
+WantedBy=timers.target

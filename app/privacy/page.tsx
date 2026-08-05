@@ -22,7 +22,7 @@ export default function PrivacyPage() {
             <br />
             ИНН: 231714600779.
             <br />
-            Email для обращений: Second_Brain_Pediatra@mail.ru
+            Email для обращений: second_brain_pediatra@mail.ru
           </p>
         </section>
 

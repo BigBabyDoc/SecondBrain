@@ -1,0 +1,13 @@
+# /etc/systemd/system/secondbrain-cron.service
+# Запускается таймером secondbrain-cron.timer, вручную — systemctl start secondbrain-cron.service
+
+[Unit]
+Description=Ежедневная задача по подпискам (истёкшие подписки и напоминания)
+After=network.target
+
+[Service]
+Type=oneshot
+User=app
+# CRON_SECRET берётся из того же .env, что и приложение
+EnvironmentFile=/home/app/secondbrain/.env
+ExecStart=/bin/sh -c '/usr/bin/curl -fsS -X POST "$NEXTAUTH_URL/api/cron/subscriptions" -H "Authorization: Bearer $CRON_SECRET"'

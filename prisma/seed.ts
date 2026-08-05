@@ -11,7 +11,28 @@ const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "admin12345";
 const DOCTOR_EMAIL = process.env.SEED_DOCTOR_EMAIL ?? "doctor@vtoroymozg.ru";
 const DOCTOR_PASSWORD = process.env.SEED_DOCTOR_PASSWORD ?? "doctor12345";
 
+/**
+ * Пароли по умолчанию лежат в открытом виде в репозитории, поэтому на проде
+ * сид разрешён только со своими значениями SEED_ADMIN_PASSWORD и
+ * SEED_DOCTOR_PASSWORD — иначе на живом сайте появится админ с известным паролем.
+ */
+function assertSafeToSeed() {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const usingDefaults =
+    !process.env.SEED_ADMIN_PASSWORD || !process.env.SEED_DOCTOR_PASSWORD;
+
+  if (usingDefaults) {
+    throw new Error(
+      "Отказ: сид в production с паролями по умолчанию создаст админа с известным паролем. " +
+        "Задайте SEED_ADMIN_PASSWORD и SEED_DOCTOR_PASSWORD или не запускайте сид на проде."
+    );
+  }
+}
+
 async function main() {
+  assertSafeToSeed();
+
   const adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
   const admin = await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },

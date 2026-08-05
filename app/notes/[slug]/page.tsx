@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
 import { Markdown } from "@/components/markdown";
+import { NoteToc } from "@/components/note-toc";
+import { extractHeadings } from "@/lib/toc";
 
 export async function generateMetadata({
   params,
@@ -51,6 +53,7 @@ export default async function NoteDetailPage({
 
   const requiredTier = note.tier as TierName;
   const hasAccess = hasTierAccess(userTier, requiredTier);
+  const headings = hasAccess ? extractHeadings(note.content) : [];
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
@@ -80,7 +83,8 @@ export default async function NoteDetailPage({
       <div className="mt-8 border-t border-border pt-8">
         {hasAccess ? (
           <>
-            <Markdown>{note.content}</Markdown>
+            <NoteToc headings={headings} />
+            <Markdown headings={headings}>{note.content}</Markdown>
             <p className="mt-8 rounded-xl border border-border bg-background-elevated/40 p-4 text-xs text-muted">
               ⚠️ Информация носит справочный характер, основана на общих клинических
               рекомендациях и не заменяет решение лечащего врача с учётом конкретного пациента.

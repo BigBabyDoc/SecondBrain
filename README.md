@@ -179,16 +179,30 @@ curl -X POST https://<ваш-домен>/api/cron/subscriptions \
 - `proxy.ts` — защита маршрутов `/admin` и `/account` (Next.js 16 использует `proxy.ts` вместо
   `middleware.ts`).
 - `tests/` — модульные тесты (vitest).
+- `deploy/` — готовые Caddyfile и systemd-юниты для боевого сервера.
+- `docs/deploy-yandex-cloud.md` — пошаговая инструкция развёртывания.
 
 ## Деплой
 
-Для продакшена:
+Подробная инструкция: [`docs/deploy-yandex-cloud.md`](docs/deploy-yandex-cloud.md).
 
-1. Разверните PostgreSQL (например, Vercel Postgres / Supabase / Neon).
-2. Задайте переменные окружения на хостинге, включая SMTP и `CRON_SECRET`.
-3. Выполните `npx prisma migrate deploy`.
-4. Замените тестовые ключи ЮKassa на боевые и обновите `NEXTAUTH_URL` на реальный домен —
-   это же значение подставляется в return_url и в ссылки из писем.
+Приложение собирается в режиме `output: "standalone"`, поэтому запускается не через
+`next start`, а командой `npm run start` (она поднимает `.next/standalone/server.js`).
+Копирование статики и `public/` в каталог standalone выполняет шаг `postbuild`.
+
+Коротко о продакшене:
+
+1. Разверните PostgreSQL и приложение на хостинге **в РФ** — данные граждан России
+   должны первично храниться на территории страны (ч. 5 ст. 18 152-ФЗ). Vercel, Supabase
+   и Neon по умолчанию этому требованию не отвечают.
+2. Задайте переменные окружения, включая SMTP, `CRON_SECRET` и `AUTH_TRUST_HOST=true`
+   (без последней NextAuth за обратным прокси отвергает запросы с ошибкой `UntrustedHost`).
+3. Выполните `npx prisma migrate deploy`, затем `npm run build`.
+4. Замените тестовые ключи ЮKassa на боевые и укажите `NEXTAUTH_URL` с реальным доменом —
+   это же значение подставляется в return_url, ссылки из писем и `sitemap.xml`.
 5. Настройте ежедневный вызов `/api/cron/subscriptions`.
 6. Убедитесь, что сайт работает по HTTPS: через него передаются пароли и персональные данные,
    этого требует ст. 19 152-ФЗ.
+7. Не запускайте `prisma db seed` на проде — пароли демо-аккаунтов лежат в репозитории.
+   Сид сам откажется работать при `NODE_ENV=production` без собственных
+   `SEED_ADMIN_PASSWORD` и `SEED_DOCTOR_PASSWORD`.

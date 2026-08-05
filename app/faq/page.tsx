@@ -134,10 +134,10 @@ export default function FaqPage() {
       <p className="mt-10 text-sm text-muted">
         Остались вопросы? Напишите на{" "}
         <a
-          href="mailto:Second_Brain_Pediatra@mail.ru"
+          href="mailto:second_brain_pediatra@mail.ru"
           className="text-brand-blue hover:underline"
         >
-          Second_Brain_Pediatra@mail.ru
+          second_brain_pediatra@mail.ru
         </a>
         .
       </p>
