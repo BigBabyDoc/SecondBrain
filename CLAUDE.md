@@ -86,7 +86,13 @@ User / JWT types so `session.user.role` is typed. Registration (`lib/actions/aut
 user *and* a FREE `Subscription` in one call, then signs in.
 
 Emails are never blocking: `lib/mail.ts` swallows SMTP errors and falls back to console output when
-`SMTP_*` is unset, so a broken mailbox cannot break registration or payment. Tokens
+`SMTP_*` is unset, so a broken mailbox cannot break registration or payment — but a failure is
+reported to Sentry and returned as a `MailResult`, because silently losing verification emails would
+otherwise only surface through user complaints. Production sends through the corporate Mail.ru
+mailbox, which requires an app password rather than the account password; `npm run mail:check`
+verifies credentials (and optionally sends a test message) without registering a user. The transport
+is pooled and rate-limited on purpose — providers treat bursts and frequent reconnects as spam
+signals. Tokens
 (`lib/tokens.ts`) are random 32 bytes; **only their SHA-256 hash is stored** and comparison is
 constant-time. Email verification arrives as a *link* handled by `app/verify-email/route.ts` — a
 route handler, not a page, because a page render can repeat (prefetch, retry) and burn the token.
