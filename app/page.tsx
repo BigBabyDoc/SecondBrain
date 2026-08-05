@@ -17,14 +17,13 @@ export default async function HomePage() {
   return (
     <div>
       <section className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-        {/* Подпись авторов. На широких экранах встаёт в свободное поле справа
-            от текста, ниже xl — обычным блоком под кнопками, чтобы не наезжать. */}
-        <aside className="absolute right-4 top-1/2 hidden -translate-y-1/2 border-l border-border pl-4 text-left text-xs leading-relaxed text-muted xl:block">
+        {/* Подпись авторов: на компьютере — неприметно в нижнем углу секции,
+            на узких экранах абсолютное позиционирование наезжало бы на текст,
+            поэтому там она идёт обычным блоком под кнопками. */}
+        <aside className="absolute bottom-5 right-6 hidden text-right font-signature text-base italic leading-snug text-muted/70 lg:block">
           {CREDITS.map((credit) => (
-            <p key={credit.name} className="mt-2 first:mt-0">
-              {credit.role}
-              <br />
-              <span className="text-foreground">{credit.name}</span>
+            <p key={credit.name}>
+              {credit.role} — {credit.name}
             </p>
           ))}
         </aside>
@@ -59,10 +58,10 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-1 text-xs text-muted xl:hidden">
+          <div className="mt-10 flex flex-wrap justify-center gap-x-6 font-signature text-base italic text-muted/70 lg:hidden">
             {CREDITS.map((credit) => (
               <p key={credit.name}>
-                {credit.role} — <span className="text-foreground">{credit.name}</span>
+                {credit.role} — {credit.name}
               </p>
             ))}
           </div>
