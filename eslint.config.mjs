@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Хранилища Obsidian: внутри .obsidian лежит чужой код плагинов, проверять
+    // его нашими правилами бессмысленно.
+    "Second brain data/**",
+    "Test Data/**",
   ]),
 ]);
 

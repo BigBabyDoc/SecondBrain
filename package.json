@@ -10,7 +10,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "mail:check": "tsx scripts/check-mail.ts"
+    "mail:check": "tsx scripts/check-mail.ts",
+    "notes:import": "tsx scripts/import-notes.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
