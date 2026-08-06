@@ -57,13 +57,17 @@ export default async function NoteDetailPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-      <Link href="/notes" className="text-sm text-muted hover:text-foreground">
-        ← Все заметки
-      </Link>
+      {/* Флекс с gap, а не пробел в разметке: JSX съедает пробел между
+          элементами, если между ними перенос строки. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/notes" className="text-sm text-muted hover:text-foreground">
+          ← Все заметки
+        </Link>
 
-      <span className="mt-4 inline-block rounded-full bg-brand-blue/15 px-2.5 py-0.5 text-xs font-medium text-brand-blue">
-        {TIER_LABELS[requiredTier]}
-      </span>
+        <span className="rounded-full bg-brand-blue/15 px-2.5 py-0.5 text-xs font-medium text-brand-blue">
+          {TIER_LABELS[requiredTier]}
+        </span>
+      </div>
       <h1 className="mt-3 text-3xl font-bold">{note.title}</h1>
       <p className="mt-3 text-muted">{note.excerpt}</p>
 
