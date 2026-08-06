@@ -192,7 +192,7 @@ export function NoteForm({
       </div>
 
       <div>
-        <label htmlFor="note-excerpt" className="block text-sm text-muted">Краткое описание (excerpt)</label>
+        <label htmlFor="note-excerpt" className="block text-sm text-muted">Краткое описание</label>
         <textarea
           id="note-excerpt"
           name="excerpt"
