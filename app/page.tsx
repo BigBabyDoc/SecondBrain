@@ -2,11 +2,6 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { BILLING_PERIODS, PLAN_LABELS, PLAN_PRICES } from "@/lib/access";
 
-const CREDITS: { role: string; name: string }[] = [
-  { role: "Автор бэкенда", name: "Авакимянц Левон" },
-  { role: "Автор фронта", name: "Кузнецов Валерий" },
-];
-
 export default async function HomePage() {
   const freeNotes = await prisma.note.findMany({
     where: { published: true, tier: "FREE" },
@@ -16,18 +11,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <section className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-        {/* Подпись авторов: на компьютере — неприметно в нижнем углу секции,
-            на узких экранах абсолютное позиционирование наезжало бы на текст,
-            поэтому там она идёт обычным блоком под кнопками. */}
-        <aside className="absolute bottom-5 right-6 hidden text-right font-signature text-base italic leading-snug text-muted/70 lg:block">
-          {CREDITS.map((credit) => (
-            <p key={credit.name}>
-              {credit.role} — {credit.name}
-            </p>
-          ))}
-        </aside>
-
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-widest text-brand-green">
             Заметки для ежедневной практики
@@ -56,14 +40,6 @@ export default async function HomePage() {
             >
               Тарифы
             </Link>
-          </div>
-
-          <div className="mt-10 flex flex-wrap justify-center gap-x-6 font-signature text-base italic text-muted/70 lg:hidden">
-            {CREDITS.map((credit) => (
-              <p key={credit.name}>
-                {credit.role} — {credit.name}
-              </p>
-            ))}
           </div>
         </div>
       </section>

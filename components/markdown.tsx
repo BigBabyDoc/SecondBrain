@@ -56,45 +56,66 @@ export function Markdown({
         {children}
       </h4>
     ),
-    p: (props) => <p className="mt-4 first:mt-0" {...props} />,
-    ul: (props) => <ul className="mt-4 list-disc space-y-1 pl-6" {...props} />,
-    ol: (props) => <ol className="mt-4 list-decimal space-y-1 pl-6" {...props} />,
-    li: (props) => <li className="pl-1" {...props} />,
-    strong: (props) => <strong className="font-semibold text-foreground" {...props} />,
-    blockquote: (props) => (
-      <blockquote
-        className="mt-4 border-l-2 border-brand-blue/60 pl-4 italic text-muted"
-        {...props}
-      />
+    // Ниже пропсы не разворачиваются целиком: react-markdown передаёт служебный
+    // node с узлом AST, и при спреде он утекает в DOM как node="[object Object]".
+    p: ({ children }) => <p className="mt-4 first:mt-0">{children}</p>,
+    ul: ({ children }) => <ul className="mt-4 list-disc space-y-1 pl-6">{children}</ul>,
+    ol: ({ children }) => <ol className="mt-4 list-decimal space-y-1 pl-6">{children}</ol>,
+    li: ({ children }) => <li className="pl-1">{children}</li>,
+    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+    em: ({ children }) => <em className="italic">{children}</em>,
+    blockquote: ({ children }) => (
+      <blockquote className="mt-4 border-l-2 border-brand-blue/60 pl-4 italic text-muted">
+        {children}
+      </blockquote>
     ),
-    a: (props) => (
-      <a className="text-brand-blue hover:underline" rel="noopener noreferrer" {...props} />
+    a: ({ href, children }) => (
+      <a href={href} rel="noopener noreferrer" className="text-brand-blue hover:underline">
+        {children}
+      </a>
     ),
-    code: (props) => (
-      <code
-        className="rounded bg-background-elevated px-1.5 py-0.5 font-mono text-[13px]"
-        {...props}
-      />
+    code: ({ children }) => (
+      <code className="rounded bg-background-elevated px-1.5 py-0.5 font-mono text-[13px]">
+        {children}
+      </code>
     ),
-    pre: (props) => (
-      <pre
-        className="mt-4 overflow-x-auto rounded-lg border border-border bg-background-elevated p-4 text-[13px]"
-        {...props}
-      />
+    pre: ({ children }) => (
+      <pre className="mt-4 overflow-x-auto rounded-lg border border-border bg-background-elevated p-4 text-[13px]">
+        {children}
+      </pre>
     ),
     hr: () => <hr className="mt-8 border-border" />,
-    table: (props) => (
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full border-collapse text-sm" {...props} />
-      </div>
-    ),
-    th: (props) => (
-      <th
-        className="border border-border bg-background-elevated px-3 py-2 text-left font-medium"
-        {...props}
+    // Картинки приходят из /api/media, их размеры заранее неизвестны —
+    // обычный img с ограничением по ширине, без next/image.
+    img: ({ src, alt, title }) => (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={typeof src === "string" ? src : undefined}
+        alt={alt ?? ""}
+        title={title}
+        loading="lazy"
+        className="mt-4 h-auto max-w-full rounded-lg border border-border"
       />
     ),
-    td: (props) => <td className="border border-border px-3 py-2 align-top" {...props} />,
+    table: ({ children }) => (
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">{children}</table>
+      </div>
+    ),
+    // style сохраняем: в GFM-таблицах через него задаётся выравнивание колонок.
+    th: ({ children, style }) => (
+      <th
+        style={style}
+        className="border border-border bg-background-elevated px-3 py-2 text-left font-medium"
+      >
+        {children}
+      </th>
+    ),
+    td: ({ children, style }) => (
+      <td style={style} className="border border-border px-3 py-2 align-top">
+        {children}
+      </td>
+    ),
   };
 
   return (

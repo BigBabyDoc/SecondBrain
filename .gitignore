@@ -43,3 +43,6 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# локальное хранилище файлов заметок (используется, когда не настроен S3)
+.media/

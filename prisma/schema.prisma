@@ -54,6 +54,7 @@ model User {
   notes              Note[]                   @relation("NoteAuthor")
   passwordResets     PasswordResetToken[]
   emailVerifications EmailVerificationToken[]
+  media              MediaObject[]            @relation("MediaUploader")
 }
 
 /// Токены одноразовые: хранится только SHA-256 хеш, сам токен уходит пользователю в письме.
@@ -116,6 +117,23 @@ model Payment {
   yookassaPaymentId String      @unique
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+}
+
+/// Загруженные файлы адресуются по содержимому: ключ хранения — sha256 байтов,
+/// поэтому повторная загрузка того же файла не создаёт дубликат.
+/// Сами байты лежат в S3 или в локальной папке — см. lib/storage.ts.
+model MediaObject {
+  id           String   @id @default(cuid())
+  checksum     String   @unique
+  contentType  String
+  sizeBytes    Int
+  storageKey   String
+  originalName String
+  uploadedById String
+  uploadedBy   User     @relation("MediaUploader", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([uploadedById])
 }
 
 model Note {
