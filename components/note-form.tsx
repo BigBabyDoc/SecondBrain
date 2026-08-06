@@ -1,8 +1,54 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { Markdown } from "@/components/markdown";
 import { NoteFormState } from "@/lib/actions/notes";
+
+type Mode = "edit" | "preview";
+
+const MODES: [Mode, string][] = [
+  ["edit", "Редактирование"],
+  ["preview", "Просмотр"],
+];
+
+/** Картинки, вставленные в текст: `![подпись](/api/media/…)`. */
+const IMAGE_MARKDOWN = /!\[([^\]]*)\]\((\/api\/media\/[^)\s]+)\)/g;
+
+const MIRRORED_STYLES = [
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "lineHeight",
+  "letterSpacing",
+  "padding",
+  "borderWidth",
+  "textTransform",
+] as const;
+
+/**
+ * Высота текста до указанной позиции — измеряется невидимой копией поля.
+ * Ни браузер, ни арифметика по номеру строки здесь не помогают: `focus()`
+ * поле не прокручивает, а строки переносятся, и «номер строки × высота»
+ * промахивается тем сильнее, чем длиннее заметка.
+ */
+function offsetOfIndex(field: HTMLTextAreaElement, index: number): number {
+  const source = getComputedStyle(field);
+  const mirror = document.createElement("div");
+
+  for (const property of MIRRORED_STYLES) mirror.style[property] = source[property];
+  mirror.style.position = "absolute";
+  mirror.style.top = "-9999px";
+  mirror.style.width = `${field.clientWidth}px`;
+  mirror.style.whiteSpace = "pre-wrap";
+  mirror.style.overflowWrap = "break-word";
+  mirror.textContent = field.value.slice(0, index);
+
+  document.body.append(mirror);
+  const offset = mirror.scrollHeight;
+  mirror.remove();
+
+  return offset;
+}
 
 type NoteFormValues = {
   title: string;
@@ -27,11 +73,62 @@ export function NoteForm({
     {}
   );
   const [content, setContent] = useState(defaultValues?.content ?? "");
-  const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [mode, setMode] = useState<Mode>("edit");
   const [upload, setUpload] = useState<{ busy: boolean; error?: string; note?: string }>({
     busy: false,
   });
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Вставленные картинки видно, не выходя из редактирования: в поле ввода они
+   * остаются ссылкой `![…](/api/media/…)`, а сами изображения показываются под
+   * ним. Иначе, чтобы убедиться, что загрузился нужный файл, приходится
+   * переключаться в «Просмотр» и обратно.
+   */
+  const images = useMemo(() => {
+    const byUrl = new Map<string, string>();
+    for (const [, alt, url] of content.matchAll(IMAGE_MARKDOWN)) byUrl.set(url, alt);
+    return [...byUrl].map(([url, alt]) => ({ url, alt }));
+  }, [content]);
+
+  /**
+   * Крестик убирает вставку из текста заметки. Сам файл остаётся в хранилище:
+   * он адресуется по содержимому и может быть вставлен в другие заметки, так
+   * что удалять его отсюда было бы опасно. Строка, где кроме картинки ничего
+   * не было, уходит целиком — иначе останется пустая.
+   */
+  function removeImage(url: string) {
+    const insert = new RegExp(
+      `!\\[[^\\]]*\\]\\(${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`,
+      "g"
+    );
+
+    setContent((prev) =>
+      prev
+        .split("\n")
+        .map((line) => {
+          if (!line.includes(url)) return line;
+          const stripped = line.replace(insert, "");
+          return stripped.trim() === "" ? null : stripped;
+        })
+        .filter((line): line is string => line !== null)
+        .join("\n")
+    );
+  }
+
+  /** Клик по миниатюре ставит курсор на её разметку — так проще править подпись. */
+  function selectImageMarkdown(url: string) {
+    const field = contentRef.current;
+    if (!field) return;
+
+    const start = content.indexOf(`](${url})`);
+    if (start === -1) return;
+
+    const opening = content.lastIndexOf("![", start);
+    field.focus();
+    field.setSelectionRange(opening, start + `](${url})`.length);
+    field.scrollTop = Math.max(0, offsetOfIndex(field, opening) - field.clientHeight / 2);
+  }
 
   /** Вставляет разметку в позицию курсора, а не в конец — иначе файл уезжает от места вставки. */
   function insertAtCursor(snippet: string) {
@@ -55,7 +152,7 @@ export function NoteForm({
     });
   }
 
-  async function uploadFiles(files: FileList | null) {
+  async function uploadFiles(files: FileList | File[] | null) {
     if (!files?.length) return;
     setUpload({ busy: true });
     try {
@@ -114,12 +211,7 @@ export function NoteForm({
             </span>
           </label>
           <div className="flex gap-1 rounded-full border border-border p-0.5 text-xs">
-            {(
-              [
-                ["edit", "Редактирование"],
-                ["preview", "Просмотр"],
-              ] as const
-            ).map(([value, label]) => (
+            {MODES.map(([value, label]) => (
               <button
                 key={value}
                 type="button"
@@ -149,6 +241,13 @@ export function NoteForm({
               e.preventDefault();
               void uploadFiles(e.dataTransfer.files);
             }}
+            onPaste={(e) => {
+              // Скриншот из буфера — самый частый способ добавить картинку.
+              const files = Array.from(e.clipboardData.files);
+              if (files.length === 0) return;
+              e.preventDefault();
+              void uploadFiles(files);
+            }}
             required
             rows={14}
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:border-brand-blue"
@@ -169,12 +268,55 @@ export function NoteForm({
                 className="hidden"
               />
             </label>
-            <span>PNG, JPEG, WebP, GIF, PDF — до 10 МБ. Можно перетащить файл в поле.</span>
+            <span>
+              PNG, JPEG, WebP, GIF, PDF — до 10 МБ. Файл можно перетащить в поле или
+              вставить из буфера.
+            </span>
           </div>
 
           {upload.error && <p className="mt-2 text-sm text-red-400">{upload.error}</p>}
           {upload.note && !upload.error && (
             <p className="mt-2 text-sm text-brand-green">{upload.note}</p>
+          )}
+
+          {images.length > 0 && (
+            <div className="mt-4 rounded-lg border border-border bg-background-elevated/40 p-3">
+              <p className="text-xs text-muted">
+                Вложения в тексте ({images.length}) — нажмите, чтобы выделить разметку
+              </p>
+              <div className="mt-2 flex flex-wrap gap-3">
+                {images.map((image) => (
+                  <div key={image.url} className="relative w-32">
+                    <button
+                      type="button"
+                      onClick={() => selectImageMarkdown(image.url)}
+                      title={image.alt || image.url}
+                      className="block w-full overflow-hidden rounded-lg border border-border text-left hover:border-brand-blue"
+                    >
+                      {/* Обычный img: файлы отдаёт наш /api/media, оптимизатор Next тут не нужен. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={image.url}
+                        alt={image.alt}
+                        className="h-24 w-full bg-background object-contain"
+                      />
+                      <span className="block truncate px-2 py-1 text-[11px] text-muted">
+                        {image.alt || "без подписи"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeImage(image.url)}
+                      title="Убрать из текста заметки"
+                      aria-label={`Убрать «${image.alt || "изображение"}» из текста`}
+                      className="absolute right-1 top-1 rounded-full border border-border bg-background/90 px-1.5 pb-0.5 text-sm leading-none text-muted hover:border-red-400 hover:text-red-400"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

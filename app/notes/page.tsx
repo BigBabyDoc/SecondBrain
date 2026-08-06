@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NoteSearch } from "@/components/note-search";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
@@ -47,11 +48,14 @@ export default async function NotesPage({
 
   const where = {
     published: true,
+    // Ищем и по тексту заметки: подсказки в строке поиска находят упоминания
+    // внутри текста, и по Enter результат должен быть тем же.
     ...(q
       ? {
           OR: [
             { title: { contains: q, mode: "insensitive" as const } },
             { excerpt: { contains: q, mode: "insensitive" as const } },
+            { content: { contains: q, mode: "insensitive" as const } },
           ],
         }
       : {}),
@@ -82,13 +86,7 @@ export default async function NotesPage({
       </p>
 
       <form className="mt-6 flex flex-wrap gap-3" action="/notes" method="GET">
-        <input
-          type="text"
-          name="q"
-          defaultValue={q}
-          placeholder="Поиск по заметкам..."
-          className="min-w-0 flex-1 rounded-lg border border-border bg-background-elevated px-3 py-2 text-sm outline-none focus:border-brand-blue"
-        />
+        <NoteSearch defaultValue={q} />
         {tag && <input type="hidden" name="tag" value={tag} />}
         <button
           type="submit"
