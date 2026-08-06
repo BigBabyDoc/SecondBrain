@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
+import { parseTags } from "@/lib/tags";
 
 async function requireAdmin() {
   const session = await auth();
@@ -25,17 +26,6 @@ const noteSchema = z.object({
 });
 
 export type NoteFormState = { error?: string };
-
-function parseTags(raw: string): string[] {
-  return Array.from(
-    new Set(
-      raw
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean)
-    )
-  );
-}
 
 export async function createNoteAction(
   _prevState: NoteFormState,
