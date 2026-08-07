@@ -15,6 +15,13 @@ export const metadata = {
   title: "Личный кабинет — Второй мозг педиатра",
 };
 
+/** Статусы платежа — отдельный набор: значения не пересекаются со статусами подписки. */
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Ожидает оплаты",
+  SUCCEEDED: "Оплачен",
+  CANCELED: "Отменён",
+};
+
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Активна",
   PENDING: "Ожидает оплаты",
@@ -202,9 +209,9 @@ export default async function AccountPage({
                       {TIER_LABELS[p.tier as TierName]} · {PLAN_LABELS[p.period as BillingPeriod]}
                     </td>
                     <td className="px-4 py-2">
-                      {p.amount.toString()} {p.currency}
+                      {p.amount.toString()} {p.currency === "RUB" ? "₽" : p.currency}
                     </td>
-                    <td className="px-4 py-2">{STATUS_LABELS[p.status] ?? p.status}</td>
+                    <td className="px-4 py-2">{PAYMENT_STATUS_LABELS[p.status] ?? p.status}</td>
                   </tr>
                 ))}
               </tbody>
