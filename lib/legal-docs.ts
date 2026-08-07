@@ -30,14 +30,11 @@ function orPlaceholder(value: string, label: string): string {
   return value.trim() || `«${label} — не указан»`;
 }
 
-function substitute(markdown: string): string {
+function substitute(markdown: string, key: LegalDocumentKey): string {
   const replacements: Record<string, string> = {
     "{{SITE_URL}}": siteUrl(),
     "{{POSTAL_ADDRESS}}": orPlaceholder(OPERATOR.postalAddress, "адрес для корреспонденции"),
-    "{{REVISION_DATE}}": orPlaceholder(
-      LEGAL_DOCUMENTS.terms.revisedAt,
-      "дата редакции"
-    ),
+    "{{REVISION_DATE}}": orPlaceholder(LEGAL_DOCUMENTS[key].revisedAt, "дата редакции"),
     "{{AUTO_RENEWAL_NOTICE}}": AUTO_RENEWAL_ENABLED ? "" : AUTO_RENEWAL_NOTICE,
   };
 
@@ -60,5 +57,5 @@ export async function loadLegalDocument(key: LegalDocumentKey): Promise<string> 
   // не было двух h1 подряд.
   const withoutTitle = raw.replace(/^#\s+.+\n/, "");
 
-  return substitute(withoutTitle);
+  return substitute(withoutTitle, key);
 }

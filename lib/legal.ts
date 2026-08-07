@@ -39,7 +39,7 @@ export type LegalDocument = {
   /** Короткое название для ссылок в тексте и футере */
   shortTitle: string;
   version: string;
-  /** TODO: дата редакции. Пустая строка — документ ещё не датирован. */
+  /** Дата редакции. Пустая строка — документ ещё не датирован. */
   revisedAt: string;
 };
 
@@ -50,7 +50,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     title: "Пользовательское соглашение",
     shortTitle: "Пользовательское соглашение",
     version: "1",
-    revisedAt: "",
+    revisedAt: "7 августа 2026 г",
   },
   offer: {
     key: "offer",
@@ -58,7 +58,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     title: "Публичная оферта",
     shortTitle: "Публичная оферта",
     version: "1",
-    revisedAt: "",
+    revisedAt: "7 августа 2026 г",
   },
   privacy: {
     key: "privacy",
@@ -66,7 +66,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     title: "Политика обработки персональных данных",
     shortTitle: "Политика обработки персональных данных",
     version: "1",
-    revisedAt: "",
+    revisedAt: "7 августа 2026 г",
   },
   cookies: {
     key: "cookies",
@@ -74,7 +74,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     title: "Политика использования файлов cookie",
     shortTitle: "Политика cookie",
     version: "1",
-    revisedAt: "",
+    revisedAt: "7 августа 2026 г",
   },
   consents: {
     key: "consents",
@@ -82,7 +82,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     title: "Формы согласий",
     shortTitle: "Формы согласий",
     version: "1",
-    revisedAt: "",
+    revisedAt: "7 августа 2026 г",
   },
 };
 
