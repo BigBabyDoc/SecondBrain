@@ -55,6 +55,37 @@ model User {
   passwordResets     PasswordResetToken[]
   emailVerifications EmailVerificationToken[]
   media              MediaObject[]            @relation("MediaUploader")
+  consents           Consent[]
+}
+
+enum ConsentType {
+  /// Ознакомление с Пользовательским соглашением и Публичной офертой
+  TERMS
+  /// Согласие № 1 — на обработку персональных данных
+  PERSONAL_DATA
+  /// Подтверждение статуса медработника и возраста 18+
+  PROFESSIONAL_STATUS
+  /// Согласие № 4 — на информационные и рекламные сообщения
+  MARKETING
+  /// Согласие № 2 — на автопродление. Не используется, пока автосписание не запущено.
+  AUTO_RENEWAL
+}
+
+/// Журнал согласий: закон требует подтверждать факт, дату, время и версию
+/// документа при предоставлении и отзыве каждого согласия.
+model Consent {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ConsentType
+  /// Версия документа, с которой согласился пользователь
+  version   String
+  grantedAt DateTime    @default(now())
+  grantedIp String?
+  revokedAt DateTime?
+  revokedIp String?
+
+  @@index([userId, type])
 }
 
 /// Токены одноразовые: хранится только SHA-256 хеш, сам токен уходит пользователю в письме.

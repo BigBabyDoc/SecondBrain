@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { CookieConsent } from "@/components/cookie-consent";
+import { metrikaCounterId, readCookieChoice } from "@/lib/cookie-consent";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,11 +39,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieChoice = await readCookieChoice();
+
   return (
     <html
       lang="ru"
@@ -51,6 +55,7 @@ export default function RootLayout({
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />
+        <CookieConsent counterId={metrikaCounterId()} initialChoice={cookieChoice} />
       </body>
     </html>
   );

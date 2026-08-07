@@ -6,13 +6,27 @@ import { headingPalette, type Heading } from "@/lib/toc";
 // вплотную к верхней границе окна.
 const HEADING_BASE = "scroll-mt-24 first:mt-0";
 
+/**
+ * "note" — заметки: заголовки окрашены по уровню в палитру Nord.
+ * "legal" — юридические документы: нейтральные заголовки, цветовая
+ * маркировка уровней там неуместна и мешает читать.
+ */
+export type MarkdownVariant = "note" | "legal";
+
+const LEGAL_HEADING_COLOR = "text-foreground";
+
 export function Markdown({
   children,
   headings = [],
+  variant = "note",
 }: {
   children: string;
   headings?: Heading[];
+  variant?: MarkdownVariant;
 }) {
+  const color = (level: 1 | 2 | 3 | 4) =>
+    variant === "legal" ? LEGAL_HEADING_COLOR : headingPalette(level).text;
+
   // Заголовки рендерятся в том же порядке, в каком их нашёл extractHeadings,
   // поэтому якоря раздаются по счётчику — это гарантирует совпадение
   // ссылок в оглавлении и id на странице даже при одинаковых названиях.
@@ -27,7 +41,7 @@ export function Markdown({
     h1: ({ children }) => (
       <h2
         id={nextId()}
-        className={`mt-8 text-2xl font-bold ${headingPalette(1).text} ${HEADING_BASE}`}
+        className={`mt-8 text-2xl font-bold ${color(1)} ${HEADING_BASE}`}
       >
         {children}
       </h2>
@@ -35,7 +49,7 @@ export function Markdown({
     h2: ({ children }) => (
       <h2
         id={nextId()}
-        className={`mt-8 text-xl font-semibold ${headingPalette(2).text} ${HEADING_BASE}`}
+        className={`mt-8 text-xl font-semibold ${color(2)} ${HEADING_BASE}`}
       >
         {children}
       </h2>
@@ -43,7 +57,7 @@ export function Markdown({
     h3: ({ children }) => (
       <h3
         id={nextId()}
-        className={`mt-6 text-lg font-semibold ${headingPalette(3).text} ${HEADING_BASE}`}
+        className={`mt-6 text-lg font-semibold ${color(3)} ${HEADING_BASE}`}
       >
         {children}
       </h3>
@@ -51,7 +65,7 @@ export function Markdown({
     h4: ({ children }) => (
       <h4
         id={nextId()}
-        className={`mt-5 text-base font-semibold ${headingPalette(4).text} ${HEADING_BASE}`}
+        className={`mt-5 text-base font-semibold ${color(4)} ${HEADING_BASE}`}
       >
         {children}
       </h4>

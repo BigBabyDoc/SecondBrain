@@ -5,14 +5,22 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/auth";
 import { issueEmailVerification } from "@/lib/actions/email-verification";
+import { grantConsent, requestIp } from "@/lib/consents";
+
+/** Отметка проставлена, если браузер прислал значение "on". */
+const checkbox = (message: string) => z.literal("on", { message });
 
 const registerSchema = z.object({
   name: z.string().min(2, "Укажите имя"),
   email: z.string().email("Некорректный email"),
   password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
-  consent: z.literal("on", {
-    message: "Нужно согласиться с офертой и политикой обработки персональных данных",
-  }),
+  terms: checkbox("Нужно принять Пользовательское соглашение и Публичную оферту"),
+  personalData: checkbox("Без согласия на обработку персональных данных регистрация невозможна"),
+  professionalStatus: checkbox(
+    "Сервис предназначен для медицинских работников старше 18 лет — подтвердите это"
+  ),
+  // Добровольное: отсутствие отметки не должно мешать регистрации.
+  marketing: z.literal("on").optional(),
 });
 
 export type RegisterState = {
@@ -27,14 +35,17 @@ export async function registerAction(
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
-    consent: formData.get("consent"),
+    terms: formData.get("terms"),
+    personalData: formData.get("personalData"),
+    professionalStatus: formData.get("professionalStatus"),
+    marketing: formData.get("marketing") ?? undefined,
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Проверьте введённые данные" };
   }
 
-  const { name, password } = parsed.data;
+  const { name, password, marketing } = parsed.data;
   const email = parsed.data.email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -57,6 +68,16 @@ export async function registerAction(
       },
     },
   });
+
+  // Каждое согласие фиксируется отдельной записью: закон требует подтверждать
+  // факт, дату, время, IP и версию документа по каждому из них.
+  const ip = await requestIp();
+  await grantConsent({ userId: user.id, type: "TERMS", ip });
+  await grantConsent({ userId: user.id, type: "PERSONAL_DATA", ip });
+  await grantConsent({ userId: user.id, type: "PROFESSIONAL_STATUS", ip });
+  if (marketing === "on") {
+    await grantConsent({ userId: user.id, type: "MARKETING", ip });
+  }
 
   await issueEmailVerification(user);
 

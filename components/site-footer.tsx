@@ -1,5 +1,15 @@
 import Link from "next/link";
 import { CONTACT_EMAIL, socialLinks } from "@/lib/social";
+import { CookieSettingsLink } from "@/components/cookie-settings-link";
+import { LEGAL_DOCUMENTS, OPERATOR } from "@/lib/legal";
+
+const LEGAL_LINKS = [
+  LEGAL_DOCUMENTS.terms,
+  LEGAL_DOCUMENTS.offer,
+  LEGAL_DOCUMENTS.privacy,
+  LEGAL_DOCUMENTS.cookies,
+  LEGAL_DOCUMENTS.consents,
+];
 
 const ICONS: Record<string, React.ReactNode> = {
   Telegram: (
@@ -64,18 +74,19 @@ export function SiteFooter() {
           и не заменяют консультацию врача.
         </p>
         <p className="text-xs">
-          Кузнецов Валерий Каренович (самозанятый), ИНН 231714600779.
+          {OPERATOR.fullName} (самозанятый), ИНН {OPERATOR.inn}.
         </p>
-        <div className="flex flex-wrap justify-center gap-4 text-xs">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
           <Link href="/faq" className="hover:text-foreground hover:underline">
             Вопросы и ответы
           </Link>
-          <Link href="/oferta" className="hover:text-foreground hover:underline">
-            Публичная оферта
-          </Link>
-          <Link href="/privacy" className="hover:text-foreground hover:underline">
-            Политика конфиденциальности
-          </Link>
+          {LEGAL_LINKS.map((doc) => (
+            <Link key={doc.href} href={doc.href} className="hover:text-foreground hover:underline">
+              {doc.shortTitle}
+            </Link>
+          ))}
+          {/* Требование Политики cookie: изменить выбор можно с любой страницы. */}
+          <CookieSettingsLink />
         </div>
       </div>
     </footer>

@@ -7,6 +7,9 @@ import {
   cancelSubscriptionAction,
   resumeSubscriptionAction,
 } from "@/lib/actions/subscription";
+import { AccountPrivacy } from "@/components/account-privacy";
+import { AUTO_RENEWAL_ENABLED } from "@/lib/legal";
+import { hasActiveConsent } from "@/lib/consents";
 
 export const metadata = {
   title: "Личный кабинет — Второй мозг педиатра",
@@ -53,7 +56,7 @@ export default async function AccountPage({
     (params.payment && NOTICES[`payment=${params.payment}`]) ||
     null;
 
-  const [user, subscription, payments] = await Promise.all([
+  const [user, subscription, payments, marketingEnabled] = await Promise.all([
     prisma.user.findUnique({ where: { id: session.user.id } }),
     prisma.subscription.findUnique({ where: { userId: session.user.id } }),
     prisma.payment.findMany({
@@ -61,6 +64,7 @@ export default async function AccountPage({
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
+    hasActiveConsent(session.user.id, "MARKETING"),
   ]);
 
   const currentTier = (subscription?.tier as TierName) ?? "FREE";
@@ -127,7 +131,17 @@ export default async function AccountPage({
           )}
         </div>
 
-        {isCanceled && (
+        {/* Пока автосписание не запущено, обещать «отключение автопродления» нельзя:
+            подписка и так не продлевается сама. */}
+        {!AUTO_RENEWAL_ENABLED && isPaid && (
+          <p className="mt-4 rounded-lg border border-border p-3 text-sm text-muted">
+            Подписка не продлевается автоматически: деньги списываются только когда вы сами
+            оплачиваете следующий период. По окончании оплаченного срока доступ к платным
+            материалам закроется, аккаунт и бесплатные заметки останутся.
+          </p>
+        )}
+
+        {AUTO_RENEWAL_ENABLED && isCanceled && (
           <p className="mt-4 rounded-lg border border-border p-3 text-sm text-muted">
             Автопродление отключено. Доступ сохраняется до конца оплаченного периода, деньги
             больше списываться не будут.
@@ -142,7 +156,7 @@ export default async function AccountPage({
           ))}
         </div>
 
-        {isPaid && (
+        {AUTO_RENEWAL_ENABLED && isPaid && (
           <div className="mt-4">
             {isCanceled ? (
               <form action={resumeSubscriptionAction}>
@@ -160,6 +174,8 @@ export default async function AccountPage({
           </div>
         )}
       </section>
+
+      <AccountPrivacy marketingEnabled={marketingEnabled} />
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">История платежей</h2>
