@@ -133,7 +133,9 @@ export function Markdown({
   };
 
   return (
-    <div className="leading-relaxed text-[15px]">
+    // break-words: длинное неразрывное слово или ссылка иначе уезжает за край
+    // экрана и тянет за собой всю страницу — на узких экранах это ломает вёрстку.
+    <div className="leading-relaxed text-[15px] [overflow-wrap:anywhere]">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {children}
       </ReactMarkdown>

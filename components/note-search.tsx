@@ -103,6 +103,7 @@ export function NoteSearch({ defaultValue }: { defaultValue: string }) {
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
         placeholder="Поиск по заметкам..."
+        aria-label="Поиск по заметкам"
         autoComplete="off"
         role="combobox"
         aria-expanded={visible}

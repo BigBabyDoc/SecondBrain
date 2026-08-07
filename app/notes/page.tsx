@@ -100,7 +100,7 @@ export default async function NotesPage({
         <div className="mt-4 flex flex-wrap gap-2 text-xs">
           <Link
             href={buildHref({ q, tag: "", page: 1 })}
-            className={`rounded-full border px-3 py-1 ${
+            className={`rounded-full border px-3 py-2 ${
               !tag ? "border-brand-blue text-brand-blue" : "border-border text-muted"
             }`}
           >
@@ -110,7 +110,7 @@ export default async function NotesPage({
             <Link
               key={t}
               href={buildHref({ q, tag: t, page: 1 })}
-              className={`rounded-full border px-3 py-1 ${
+              className={`rounded-full border px-3 py-2 ${
                 tag === t ? "border-brand-blue text-brand-blue" : "border-border text-muted"
               }`}
             >
@@ -137,8 +137,10 @@ export default async function NotesPage({
                 </span>
                 {locked && <span className="text-muted">🔒</span>}
               </div>
-              <h2 className="mt-2 font-semibold">{note.title}</h2>
-              <p className="mt-2 text-sm text-muted line-clamp-3">{note.excerpt}</p>
+              <h2 className="mt-2 font-semibold [overflow-wrap:anywhere]">{note.title}</h2>
+              <p className="mt-2 text-sm text-muted line-clamp-3 [overflow-wrap:anywhere]">
+                {note.excerpt}
+              </p>
               {note.tags.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {note.tags.map((t) => (
@@ -153,7 +155,21 @@ export default async function NotesPage({
         })}
       </div>
 
-      {notes.length === 0 && <p className="mt-8 text-center text-muted">Ничего не найдено.</p>}
+      {notes.length === 0 && (
+        <div className="mt-8 text-center">
+          <p className="text-muted">Ничего не найдено.</p>
+          {/* Со страницы за пределом каталога иначе не выбраться: навигации
+              там нет, и остаётся только править адрес вручную. */}
+          {(page > 1 || q || tag) && (
+            <Link
+              href="/notes"
+              className="mt-4 inline-block rounded-lg border border-border px-4 py-2 text-sm hover:border-brand-blue hover:text-brand-blue"
+            >
+              Показать все заметки
+            </Link>
+          )}
+        </div>
+      )}
 
       {totalPages > 1 && (
         <nav

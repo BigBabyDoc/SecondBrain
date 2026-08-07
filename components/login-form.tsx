@@ -38,7 +38,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         />
       </div>
       <div className="text-right">
-        <Link href="/forgot-password" className="text-sm text-muted hover:text-brand-blue">
+        <Link href="/forgot-password" className="inline-block py-2 text-sm text-muted hover:text-brand-blue">
           Забыли пароль?
         </Link>
       </div>

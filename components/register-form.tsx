@@ -15,8 +15,15 @@ function Checkbox({
 }) {
   return (
     <label className="flex items-start gap-2.5 text-sm text-muted">
-      {/* Отметки не предустановлены: согласие должно быть активным действием. */}
-      <input type="checkbox" name={name} required={required} className="mt-1 shrink-0" />
+      {/* Отметки не предустановлены: согласие должно быть активным действием.
+          size-4 — вместо системных 13 px: по такому квадрату трудно попасть
+          пальцем, а согласие ставится именно на телефоне. */}
+      <input
+        type="checkbox"
+        name={name}
+        required={required}
+        className="mt-0.5 size-4 shrink-0 accent-brand-blue"
+      />
       <span>
         {children}
         {!required && <span className="text-xs"> — по желанию</span>}

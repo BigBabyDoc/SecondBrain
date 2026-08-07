@@ -46,7 +46,7 @@ export default async function AdminNotesPage() {
                 <td className="px-4 py-2 text-right">
                   <Link
                     href={`/admin/notes/${note.id}/edit`}
-                    className="text-brand-blue hover:underline"
+                    className="-my-2 inline-block py-2 text-brand-blue hover:underline"
                   >
                     Редактировать
                   </Link>

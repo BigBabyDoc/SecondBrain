@@ -2,6 +2,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { BILLING_PERIODS, PLAN_LABELS, PLAN_PRICES } from "@/lib/access";
 
+/** Раскладка витрины бесплатных заметок по их количеству (их не больше трёх). */
+const FREE_NOTES_GRID: Record<number, string> = {
+  1: "sm:max-w-sm",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+};
+
 export default async function HomePage() {
   const freeNotes = await prisma.note.findMany({
     where: { published: true, tier: "FREE" },
@@ -47,7 +54,9 @@ export default async function HomePage() {
       {freeNotes.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
           <h2 className="mb-6 text-2xl font-semibold">Бесплатные заметки</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
+          {/* Колонок столько, сколько заметок: жёсткие три оставляли пустое
+              место справа, пока бесплатных заметок меньше трёх. */}
+          <div className={`grid gap-4 ${FREE_NOTES_GRID[freeNotes.length] ?? "sm:grid-cols-3"}`}>
             {freeNotes.map((note) => (
               <Link
                 key={note.id}

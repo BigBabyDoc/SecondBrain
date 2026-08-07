@@ -181,8 +181,9 @@ export function NoteForm({
   return (
     <form action={formAction} className="mt-6 space-y-5">
       <div>
-        <label className="block text-sm text-muted">Заголовок</label>
+        <label htmlFor="note-title" className="block text-sm text-muted">Заголовок</label>
         <input
+          id="note-title"
           name="title"
           defaultValue={defaultValues?.title}
           required
@@ -191,8 +192,9 @@ export function NoteForm({
       </div>
 
       <div>
-        <label className="block text-sm text-muted">Краткое описание (excerpt)</label>
+        <label htmlFor="note-excerpt" className="block text-sm text-muted">Краткое описание (excerpt)</label>
         <textarea
+          id="note-excerpt"
           name="excerpt"
           defaultValue={defaultValues?.excerpt}
           required
@@ -203,7 +205,7 @@ export function NoteForm({
 
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <label className="block text-sm text-muted">
+          <label htmlFor="note-content" className="block text-sm text-muted">
             Текст заметки{" "}
             <span className="text-xs">
               (markdown: **жирный**, - список, | таблицы |. Заголовки # ## ### #### —
@@ -219,8 +221,8 @@ export function NoteForm({
                 aria-pressed={mode === value}
                 className={
                   mode === value
-                    ? "rounded-full bg-brand-blue px-3 py-1 font-medium text-[#0a1220]"
-                    : "rounded-full px-3 py-1 text-muted hover:text-foreground"
+                    ? "rounded-full bg-brand-blue px-3 py-2 font-medium text-[#0a1220]"
+                    : "rounded-full px-3 py-2 text-muted hover:text-foreground"
                 }
               >
                 {label}
@@ -233,6 +235,7 @@ export function NoteForm({
         <div className={mode === "edit" ? "" : "hidden"}>
           <textarea
             ref={contentRef}
+            id="note-content"
             name="content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -335,8 +338,9 @@ export function NoteForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-sm text-muted">Тариф доступа</label>
+          <label htmlFor="note-tier" className="block text-sm text-muted">Тариф доступа</label>
           <select
+            id="note-tier"
             name="tier"
             defaultValue={defaultValues?.tier ?? "FREE"}
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none focus:border-brand-blue"
@@ -346,8 +350,9 @@ export function NoteForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm text-muted">Теги (через запятую)</label>
+          <label htmlFor="note-tags" className="block text-sm text-muted">Теги (через запятую)</label>
           <input
+            id="note-tags"
             name="tags"
             defaultValue={defaultValues?.tags}
             placeholder="лихорадка, дозировки"
@@ -361,6 +366,7 @@ export function NoteForm({
           type="checkbox"
           name="published"
           defaultChecked={defaultValues?.published ?? true}
+          className="size-4 accent-brand-blue"
         />
         Опубликовано
       </label>

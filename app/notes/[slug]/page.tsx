@@ -61,7 +61,7 @@ export default async function NoteDetailPage({
       {/* Флекс с gap, а не пробел в разметке: JSX съедает пробел между
           элементами, если между ними перенос строки. */}
       <div className="flex flex-wrap items-center gap-3">
-        <Link href="/notes" className="text-sm text-muted hover:text-foreground">
+        <Link href="/notes" className="-my-2 py-2 text-sm text-muted hover:text-foreground">
           ← Все заметки
         </Link>
 
@@ -69,8 +69,8 @@ export default async function NoteDetailPage({
           {TIER_LABELS[requiredTier]}
         </span>
       </div>
-      <h1 className="mt-3 text-3xl font-bold">{note.title}</h1>
-      <p className="mt-3 text-muted">{note.excerpt}</p>
+      <h1 className="mt-3 text-3xl font-bold [overflow-wrap:anywhere]">{note.title}</h1>
+      <p className="mt-3 text-muted [overflow-wrap:anywhere]">{note.excerpt}</p>
 
       {note.tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">

@@ -66,7 +66,12 @@ export async function SiteHeader() {
             </>
           ) : (
             <>
-              <Link href="/login" className="text-sm text-muted hover:text-foreground">
+              {/* -mx-2 гасит горизонтальный padding: он нужен только ради
+                  площади нажатия и не должен сдвигать соседние элементы. */}
+              <Link
+                href="/login"
+                className="-mx-2 px-2 py-2 text-sm text-muted hover:text-foreground"
+              >
                 Войти
               </Link>
               <Link

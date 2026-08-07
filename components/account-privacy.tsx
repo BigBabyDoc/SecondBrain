@@ -71,7 +71,7 @@ export function AccountPrivacy({
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            className="text-sm text-muted hover:text-red-400"
+            className="-my-1 py-2 text-sm text-muted hover:text-red-400"
           >
             Удалить учётную запись
           </button>

@@ -118,7 +118,7 @@ export default function FaqPage() {
       <div className="mt-10 divide-y divide-border border-y border-border">
         {FAQ.map((item) => (
           <details key={item.question} className="group py-4">
-            <summary className="flex cursor-pointer items-center justify-between gap-4 font-medium marker:content-none">
+            <summary className="flex cursor-pointer items-center justify-between gap-4 py-1 font-medium marker:content-none">
               {item.question}
               <span
                 aria-hidden="true"

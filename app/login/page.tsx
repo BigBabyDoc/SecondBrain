@@ -19,7 +19,7 @@ export default async function LoginPage({
       <h1 className="text-2xl font-bold">Вход</h1>
       <p className="mt-2 text-sm text-muted">
         Нет аккаунта?{" "}
-        <Link href="/register" className="text-brand-blue hover:underline">
+        <Link href="/register" className="py-2 text-brand-blue hover:underline">
           Зарегистрироваться
         </Link>
       </p>

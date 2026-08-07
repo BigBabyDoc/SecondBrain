@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
       <ForgotPasswordForm />
       <p className="mt-6 text-sm text-muted">
         Вспомнили пароль?{" "}
-        <Link href="/login" className="text-brand-blue hover:underline">
+        <Link href="/login" className="py-2 text-brand-blue hover:underline">
           Войти
         </Link>
       </p>

@@ -13,7 +13,7 @@ export default function RegisterPage() {
       <h1 className="text-2xl font-bold">Регистрация</h1>
       <p className="mt-2 text-sm text-muted">
         Уже есть аккаунт?{" "}
-        <Link href="/login" className="text-brand-blue hover:underline">
+        <Link href="/login" className="py-2 text-brand-blue hover:underline">
           Войти
         </Link>
       </p>

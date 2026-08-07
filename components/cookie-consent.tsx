@@ -70,10 +70,19 @@ export function CookieConsent({
           className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background-elevated p-4 shadow-lg sm:p-5"
         >
           <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* На телефоне баннер перекрывает пятую часть экрана, поэтому текст
+                там короче. Смысл выбора сохранён — что за cookie, что даёт
+                отказ и где прочитать целиком; подробности ушли в /cookies. */}
             <p className="text-sm text-muted">
-              Сайт использует технически необходимые файлы cookie, без которых невозможен вход
-              в личный кабинет, а также аналитические — для статистики посещаемости. Отказ от
-              аналитических не ограничивает доступ к материалам.{" "}
+              <span className="sm:hidden">
+                Технические cookie нужны для входа в кабинет, аналитические — для
+                статистики. Отказ от аналитических не ограничивает доступ к материалам.
+              </span>
+              <span className="hidden sm:inline">
+                Сайт использует технически необходимые файлы cookie, без которых невозможен
+                вход в личный кабинет, а также аналитические — для статистики посещаемости.
+                Отказ от аналитических не ограничивает доступ к материалам.
+              </span>{" "}
               <Link href="/cookies" className="text-brand-blue hover:underline">
                 Подробнее
               </Link>
@@ -83,14 +92,14 @@ export function CookieConsent({
               <button
                 type="button"
                 onClick={() => decide("necessary")}
-                className="rounded-full border border-border px-4 py-2 text-sm hover:border-brand-blue hover:text-brand-blue"
+                className="flex-1 rounded-full border border-border px-4 py-2 text-sm hover:border-brand-blue hover:text-brand-blue sm:flex-none"
               >
                 Только необходимые
               </button>
               <button
                 type="button"
                 onClick={() => decide("all")}
-                className="rounded-full border border-border px-4 py-2 text-sm hover:border-brand-blue hover:text-brand-blue"
+                className="flex-1 rounded-full border border-border px-4 py-2 text-sm hover:border-brand-blue hover:text-brand-blue sm:flex-none"
               >
                 Принять все
               </button>

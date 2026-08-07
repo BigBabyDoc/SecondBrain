@@ -6,7 +6,7 @@ export function CookieSettingsLink() {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event("cookie-settings:open"))}
-      className="hover:text-foreground hover:underline"
+      className="py-2 hover:text-foreground hover:underline"
     >
       Настройки cookie
     </button>

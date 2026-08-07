@@ -47,7 +47,7 @@ export function SiteFooter() {
           </h2>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
-            className="text-xs hover:text-foreground hover:underline"
+            className="inline-block py-2 text-xs hover:text-foreground hover:underline"
           >
             {CONTACT_EMAIL}
           </a>
@@ -59,7 +59,7 @@ export function SiteFooter() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-xs hover:border-brand-blue hover:text-brand-blue"
+                  className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs hover:border-brand-blue hover:text-brand-blue"
                 >
                   {ICONS[social.name]}
                   {social.name}
@@ -76,12 +76,19 @@ export function SiteFooter() {
         <p className="text-xs">
           {OPERATOR.fullName} (самозанятый), ИНН {OPERATOR.inn}.
         </p>
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
-          <Link href="/faq" className="hover:text-foreground hover:underline">
+        {/* Вертикальные отступы у ссылок, а не gap-y: на телефоне строка текста
+            в 16 px — слишком мелкая цель для пальца, а padding и разводит
+            строки, и увеличивает область нажатия одновременно. */}
+        <div className="flex flex-wrap justify-center gap-x-4 text-xs">
+          <Link href="/faq" className="inline-block py-2 hover:text-foreground hover:underline">
             Вопросы и ответы
           </Link>
           {LEGAL_LINKS.map((doc) => (
-            <Link key={doc.href} href={doc.href} className="hover:text-foreground hover:underline">
+            <Link
+              key={doc.href}
+              href={doc.href}
+              className="inline-block py-2 hover:text-foreground hover:underline"
+            >
               {doc.shortTitle}
             </Link>
           ))}
