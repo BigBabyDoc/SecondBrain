@@ -34,7 +34,7 @@ export function SiteFooter() {
           <p className="font-medium text-foreground">Второй мозг педиатра</p>
           <span
             title="Информационная продукция 18+"
-            className="rounded border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted"
+            className="rounded border border-border px-1.5 py-0.5 text-[0.625rem] font-semibold text-muted"
           >
             18+
           </span>

@@ -122,7 +122,7 @@ export function NoteSearch({ defaultValue }: { defaultValue: string }) {
             <li key={suggestion.slug}>
               {groupHeadingAt(suggestions, index) && (
                 <p
-                  className={`px-3 pb-1 pt-2 text-[11px] uppercase tracking-wider text-muted ${
+                  className={`px-3 pb-1 pt-2 text-[0.6875rem] uppercase tracking-wider text-muted ${
                     index > 0 ? "mt-1 border-t border-border" : ""
                   }`}
                 >
@@ -145,7 +145,7 @@ export function NoteSearch({ defaultValue }: { defaultValue: string }) {
                 <span className="flex items-baseline justify-between gap-2">
                   <span className="truncate text-sm">{suggestion.title}</span>
                   {suggestion.tier === "PAID" && (
-                    <span className="shrink-0 text-[11px] text-brand-blue">по подписке</span>
+                    <span className="shrink-0 text-[0.6875rem] text-brand-blue">по подписке</span>
                   )}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted">

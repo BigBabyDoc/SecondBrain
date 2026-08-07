@@ -303,7 +303,7 @@ export function NoteForm({
                         alt={image.alt}
                         className="h-24 w-full bg-background object-contain"
                       />
-                      <span className="block truncate px-2 py-1 text-[11px] text-muted">
+                      <span className="block truncate px-2 py-1 text-[0.6875rem] text-muted">
                         {image.alt || "без подписи"}
                       </span>
                     </button>

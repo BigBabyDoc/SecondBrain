@@ -89,12 +89,12 @@ export function Markdown({
       </a>
     ),
     code: ({ children }) => (
-      <code className="rounded bg-background-elevated px-1.5 py-0.5 font-mono text-[13px]">
+      <code className="rounded bg-background-elevated px-1.5 py-0.5 font-mono text-[0.8125rem]">
         {children}
       </code>
     ),
     pre: ({ children }) => (
-      <pre className="mt-4 overflow-x-auto rounded-lg border border-border bg-background-elevated p-4 text-[13px]">
+      <pre className="mt-4 overflow-x-auto rounded-lg border border-border bg-background-elevated p-4 text-[0.8125rem]">
         {children}
       </pre>
     ),
@@ -135,7 +135,7 @@ export function Markdown({
   return (
     // break-words: длинное неразрывное слово или ссылка иначе уезжает за край
     // экрана и тянет за собой всю страницу — на узких экранах это ломает вёрстку.
-    <div className="leading-relaxed text-[15px] [overflow-wrap:anywhere]">
+    <div className="leading-relaxed text-[0.9375rem] [overflow-wrap:anywhere]">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {children}
       </ReactMarkdown>
