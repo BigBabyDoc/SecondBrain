@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
 import { Markdown } from "@/components/markdown";
 import { NoteToc } from "@/components/note-toc";
+import { BackToTop } from "@/components/back-to-top";
 import { extractHeadings } from "@/lib/toc";
 
 export async function generateMetadata({
@@ -89,6 +90,7 @@ export default async function NoteDetailPage({
           <>
             <NoteToc headings={headings} />
             <Markdown headings={headings}>{note.content}</Markdown>
+            <BackToTop />
             <p className="mt-8 rounded-xl border border-border bg-background-elevated/40 p-4 text-xs text-muted">
               ⚠️ Информация носит справочный характер, основана на общих клинических
               рекомендациях и не заменяет решение лечащего врача с учётом конкретного пациента.
