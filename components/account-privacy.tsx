@@ -6,7 +6,31 @@ import { deleteAccountAction, setMarketingConsentAction } from "@/lib/actions/ac
 
 const CONFIRM_WORD = "УДАЛИТЬ";
 
-export function AccountPrivacy({ marketingEnabled }: { marketingEnabled: boolean }) {
+/** Оплаченный доступ, который пропадёт при удалении. null — платной подписки нет. */
+export type PaidAccess = { endsAt: string; daysLeft: number };
+
+function pluralDays(count: number): string {
+  const tail = count % 100;
+  if (tail >= 11 && tail <= 14) return "дней";
+  switch (count % 10) {
+    case 1:
+      return "день";
+    case 2:
+    case 3:
+    case 4:
+      return "дня";
+    default:
+      return "дней";
+  }
+}
+
+export function AccountPrivacy({
+  marketingEnabled,
+  paidAccess,
+}: {
+  marketingEnabled: boolean;
+  paidAccess: PaidAccess | null;
+}) {
   const [confirming, setConfirming] = useState(false);
   const [typed, setTyped] = useState("");
 
@@ -53,11 +77,32 @@ export function AccountPrivacy({ marketingEnabled }: { marketingEnabled: boolean
           </button>
         ) : (
           <form action={deleteAccountAction} className="space-y-3 text-sm">
+            {/* Человек с оплаченной подпиской должен видеть, что именно теряет:
+                общей фразы «деньги не возвращаются» для этого мало. */}
+            {paidAccess && (
+              <p className="rounded-lg border border-red-400/40 bg-red-400/10 p-3 text-red-300">
+                У вас оплачен доступ до {paidAccess.endsAt} — это ещё{" "}
+                <strong>
+                  {paidAccess.daysLeft} {pluralDays(paidAccess.daysLeft)}
+                </strong>
+                . При удалении учётной записи он пропадёт. Если хотите вернуть деньги за
+                неиспользованный период, сделайте это{" "}
+                <Link href="/oferta#vozvrat" className="underline hover:text-red-200">
+                  до удаления
+                </Link>
+                : после удаления аккаунта подтвердить оплату будет сложнее.
+              </p>
+            )}
+
             <p className="text-red-400">
               Учётная запись и доступ к платным материалам будут удалены безвозвратно. Сведения
               о платежах сохранятся в обезличенном виде — их хранение обязательно для
               налогового учёта. Деньги за неиспользованный период не возвращаются
-              автоматически: если нужен возврат, сначала направьте заявление по оферте.
+              автоматически: возврат оформляется по заявлению в порядке{" "}
+              <Link href="/oferta" className="underline hover:text-red-200">
+                раздела 11 оферты
+              </Link>
+              .
             </p>
             <label className="block">
               <span className="text-muted">

@@ -7,7 +7,7 @@ import {
   cancelSubscriptionAction,
   resumeSubscriptionAction,
 } from "@/lib/actions/subscription";
-import { AccountPrivacy } from "@/components/account-privacy";
+import { AccountPrivacy, type PaidAccess } from "@/components/account-privacy";
 import { AUTO_RENEWAL_ENABLED } from "@/lib/legal";
 import { hasActiveConsent } from "@/lib/consents";
 
@@ -21,6 +21,23 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   SUCCEEDED: "Оплачен",
   CANCELED: "Отменён",
 };
+
+/**
+ * Сколько оплаченного доступа сгорит при удалении аккаунта. Вынесено из тела
+ * страницы: чтение текущего времени во время рендера считается нечистым.
+ * Дни округляются вверх — неполный последний день пользователь всё равно оплатил.
+ */
+function remainingPaidAccess(isPaid: boolean, periodEnd: Date | null): PaidAccess | null {
+  if (!isPaid || !periodEnd) return null;
+
+  const msLeft = periodEnd.getTime() - Date.now();
+  if (msLeft <= 0) return null;
+
+  return {
+    endsAt: periodEnd.toLocaleDateString("ru-RU"),
+    daysLeft: Math.ceil(msLeft / 86_400_000),
+  };
+}
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Активна",
@@ -77,6 +94,7 @@ export default async function AccountPage({
   const currentTier = (subscription?.tier as TierName) ?? "FREE";
   const currentPeriod = (subscription?.period as BillingPeriod | null) ?? null;
   const isPaid = currentTier === "PAID";
+  const paidAccess = remainingPaidAccess(isPaid, subscription?.currentPeriodEnd ?? null);
   const isCanceled = subscription?.status === "CANCELED";
   const emailVerified = Boolean(user?.emailVerified);
 
@@ -182,7 +200,7 @@ export default async function AccountPage({
         )}
       </section>
 
-      <AccountPrivacy marketingEnabled={marketingEnabled} />
+      <AccountPrivacy marketingEnabled={marketingEnabled} paidAccess={paidAccess} />
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">История платежей</h2>
