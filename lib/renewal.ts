@@ -64,3 +64,17 @@ export function renewalIdempotenceKey(params: {
 export function priceIncreased(agreed: number | null, current: number): boolean {
   return agreed !== null && current > agreed;
 }
+
+/** Подешевел ли тариф — п. 8.3.3 требует уведомить и списать меньшую сумму. */
+export function priceLowered(agreed: number | null, current: number): boolean {
+  return agreed !== null && current < agreed;
+}
+
+/**
+ * Сколько списывать. Никогда не больше согласованного — на это нет согласия
+ * (п. 8.3.2); и никогда не больше текущей цены — брать с человека сверх
+ * прайса только потому, что он подписался раньше подешевения, нельзя (п. 8.3.3).
+ */
+export function chargeAmount(agreed: number | null, current: number): number {
+  return agreed === null ? current : Math.min(agreed, current);
+}

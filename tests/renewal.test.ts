@@ -3,8 +3,10 @@ import {
   MAX_RENEWAL_ATTEMPTS,
   RENEWAL_GRACE_DAYS,
   addDays,
+  chargeAmount,
   nextPeriodEnd,
   priceIncreased,
+  priceLowered,
   renewalIdempotenceKey,
 } from "@/lib/renewal";
 
@@ -113,5 +115,47 @@ describe("addDays", () => {
 
   it("отрицательный сдвиг отматывает назад", () => {
     expect(addDays(NOW, -1)).toEqual(new Date("2026-08-09T12:00:00.000Z"));
+  });
+});
+
+describe("chargeAmount", () => {
+  it("подешевевший тариф списывается по новой, меньшей цене", () => {
+    // Пункт 8.3.3 оферты. Раньше здесь списывалась согласованная сумма,
+    // и человек переплачивал за то, что подписался до снижения цены.
+    expect(chargeAmount(490, 390)).toBe(390);
+  });
+
+  it("подорожавший тариф не может списаться по новой цене", () => {
+    expect(chargeAmount(490, 590)).toBe(490);
+  });
+
+  it("при неизменной цене списывается она же", () => {
+    expect(chargeAmount(490, 490)).toBe(490);
+  });
+
+  it("без согласованной суммы берётся текущая цена", () => {
+    expect(chargeAmount(null, 490)).toBe(490);
+  });
+
+  it("никогда не превышает ни согласованную сумму, ни прайс", () => {
+    for (const [agreed, current] of [[490, 390], [390, 490], [100, 100]] as const) {
+      expect(chargeAmount(agreed, current)).toBeLessThanOrEqual(agreed);
+      expect(chargeAmount(agreed, current)).toBeLessThanOrEqual(current);
+    }
+  });
+});
+
+describe("priceLowered", () => {
+  it("срабатывает только на снижение", () => {
+    expect(priceLowered(490, 390)).toBe(true);
+    expect(priceLowered(490, 490)).toBe(false);
+    expect(priceLowered(490, 590)).toBe(false);
+    expect(priceLowered(null, 390)).toBe(false);
+  });
+
+  it("рост и снижение взаимно исключены", () => {
+    for (const [agreed, current] of [[490, 390], [490, 590], [490, 490]] as const) {
+      expect(priceLowered(agreed, current) && priceIncreased(agreed, current)).toBe(false);
+    }
   });
 });

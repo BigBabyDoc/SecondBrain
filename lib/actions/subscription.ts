@@ -38,6 +38,8 @@ export async function cancelSubscriptionAction(): Promise<void> {
       autoRenew: false,
       status: "CANCELED",
       yookassaMethodId: null,
+      cardLast4: null,
+      cardNetwork: null,
       renewalAmount: null,
       renewalAttempts: 0,
       renewalNoticeSentAt: null,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fetchYookassaPayment } from "@/lib/yookassa";
+import { cardMask, fetchYookassaPayment } from "@/lib/yookassa";
 import { BillingPeriod, PLAN_PRICES } from "@/lib/access";
 import { sendPaymentSuccessEmail } from "@/lib/emails";
 import { nextPeriodEnd } from "@/lib/renewal";
@@ -49,10 +49,14 @@ export async function POST(request: Request) {
       const autoRenew =
         payment.metadata?.autoRenew === "1" && Boolean(payment.payment_method?.id);
 
+      const card = cardMask(payment);
+
       const renewalState = autoRenew
         ? {
             autoRenew: true,
             yookassaMethodId: payment.payment_method?.id,
+            cardLast4: card.last4,
+            cardNetwork: card.network,
             renewalAmount: PLAN_PRICES[period],
             renewalAttempts: 0,
             renewalNoticeSentAt: null,
@@ -63,6 +67,8 @@ export async function POST(request: Request) {
             // Держать при этом привязанное средство нельзя: цель, ради которой
             // оно сохранялось, отпала, а согласия на его использование больше нет.
             yookassaMethodId: null,
+            cardLast4: null,
+            cardNetwork: null,
             renewalAmount: null,
             renewalAttempts: 0,
             renewalNoticeSentAt: null,

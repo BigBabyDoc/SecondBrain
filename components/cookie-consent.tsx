@@ -33,12 +33,18 @@ export function CookieConsent({
 }) {
   // Начальное значение приходит с сервера, поэтому баннер сразу в нужном состоянии.
   const [choice, setChoice] = useState<CookieChoice | null>(initialChoice);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Аналитика выключена, пока её не включили: предустановленных отметок нет.
+  const [analytics, setAnalytics] = useState(false);
 
   // Ссылка «Настройки cookie» в футере снова открывает баннер.
   useEffect(() => {
     const reopen = () => {
       clearAnalyticsCookies();
       setChoice(null);
+      // Возврат к чистому выбору: прежнее согласие только что отозвано.
+      setSettingsOpen(false);
+      setAnalytics(false);
     };
     window.addEventListener("cookie-settings:open", reopen);
     return () => window.removeEventListener("cookie-settings:open", reopen);
@@ -48,6 +54,7 @@ export function CookieConsent({
     writeChoice(value);
     if (value === "necessary") clearAnalyticsCookies();
     setChoice(value);
+    setSettingsOpen(false);
   }, []);
 
   return (
@@ -88,7 +95,16 @@ export function CookieConsent({
               </Link>
             </p>
             {/* Кнопки равнозначны по виду: отказ не должен быть менее заметным. */}
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((open) => !open)}
+                aria-expanded={settingsOpen}
+                aria-controls="cookie-categories"
+                className="rounded-full border border-border px-4 py-2 text-sm text-muted hover:border-brand-blue hover:text-brand-blue"
+              >
+                Настроить
+              </button>
               <button
                 type="button"
                 onClick={() => decide("necessary")}
@@ -105,6 +121,58 @@ export function CookieConsent({
               </button>
             </div>
           </div>
+
+          {/* Выбор по категориям — его обещают п. 6.1 Политики cookie и п. 7
+              Согласия № 3. Технические cookie показаны выключенным флажком:
+              без них не работает вход, и согласие на них не спрашивают. */}
+          {settingsOpen && (
+            <div
+              id="cookie-categories"
+              className="mx-auto mt-4 max-w-4xl space-y-3 border-t border-border pt-4"
+            >
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked
+                  disabled
+                  className="mt-0.5 size-4 shrink-0 accent-brand-blue"
+                />
+                <span>
+                  <span className="font-medium text-foreground">
+                    Технически необходимые
+                  </span>
+                  <span className="block text-muted">
+                    Вход в личный кабинет и запоминание вашего выбора. Без них сайт
+                    не работает, поэтому отключить их нельзя.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={analytics}
+                  onChange={(event) => setAnalytics(event.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-brand-blue"
+                />
+                <span>
+                  <span className="font-medium text-foreground">Аналитические</span>
+                  <span className="block text-muted">
+                    Яндекс.Метрика — статистика посещаемости. Отказ ничего
+                    не ограничивает.
+                  </span>
+                </span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => decide(analytics ? "all" : "necessary")}
+                className="rounded-full border border-border px-4 py-2 text-sm hover:border-brand-blue hover:text-brand-blue"
+              >
+                Сохранить выбор
+              </button>
+            </div>
+          )}
         </div>
       )}
     </>

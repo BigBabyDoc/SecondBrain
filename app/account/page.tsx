@@ -15,6 +15,7 @@ import { AccountPrivacy, type PaidAccess } from "@/components/account-privacy";
 import { AUTO_RENEWAL_ENABLED } from "@/lib/legal";
 import { RENEWAL_NOTICE_DAYS } from "@/lib/renewal";
 import { hasActiveConsent } from "@/lib/consents";
+import { formatCard } from "@/lib/card";
 import { METRIKA_GOALS, MetrikaGoal } from "@/components/metrika-goal";
 
 export const metadata = {
@@ -107,6 +108,7 @@ export default async function AccountPage({
   const emailVerified = Boolean(user?.emailVerified);
   const autoRenew = AUTO_RENEWAL_ENABLED && Boolean(subscription?.autoRenew);
   const succeededPayment = payments.find((payment) => payment.status === "SUCCEEDED") ?? null;
+  const card = formatCard(subscription?.cardLast4, subscription?.cardNetwork);
   // Показываем сумму, о которой человек договаривался: если тариф с тех пор
   // подорожал, списания по новой цене всё равно не будет без подтверждения.
   const renewalAmount =
@@ -187,7 +189,10 @@ export default async function AccountPage({
             {subscription?.currentPeriodEnd
               ? new Date(subscription.currentPeriodEnd).toLocaleDateString("ru-RU")
               : "в день окончания периода"}
-            . Мы предупредим письмом за {RENEWAL_NOTICE_DAYS} дня — отменить успеете.
+            {/* Согласие № 2 обещает называть платёжное средство. У подписок,
+                оформленных до появления маски, её просто нет — тогда молчим. */}
+            {card && <> с карты <span className="text-foreground">{card}</span></>}. Мы
+            предупредим письмом за {RENEWAL_NOTICE_DAYS} дня — отменить успеете.
           </p>
         )}
 

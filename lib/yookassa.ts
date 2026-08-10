@@ -20,9 +20,28 @@ export type YookassaPayment = {
   paid: boolean;
   amount: { value: string; currency: string };
   confirmation?: { confirmation_url: string };
-  payment_method?: { id: string; saved: boolean };
+  payment_method?: {
+    id: string;
+    saved: boolean;
+    /** Есть только у типа bank_card; полный номер карты API не возвращает. */
+    card?: { last4?: string; card_type?: string };
+  };
   metadata?: Record<string, string>;
 };
+
+/** Маска привязанной карты для показа пользователю: «•••• 4242 · MIR». */
+export function cardMask(payment: YookassaPayment): {
+  last4: string | null;
+  network: string | null;
+} {
+  const card = payment.payment_method?.card;
+  return {
+    last4: card?.last4 ?? null,
+    // "Unknown" ЮKassa присылает, когда платёжную систему определить не удалось —
+    // показывать это слово пользователю бессмысленно.
+    network: card?.card_type && card.card_type !== "Unknown" ? card.card_type : null,
+  };
+}
 
 export function planDescription(period: BillingPeriod): string {
   return `Подписка «${PLAN_LABELS[period]}» — Второй мозг педиатра`;

@@ -8,16 +8,20 @@ import {
   RENEWAL_GRACE_DAYS,
   RENEWAL_NOTICE_DAYS,
   addDays,
+  chargeAmount,
   nextPeriodEnd,
   priceIncreased,
+  priceLowered,
   renewalIdempotenceKey,
 } from "@/lib/renewal";
+import { formatCard } from "@/lib/card";
 import {
   sendExpiryReminderEmail,
   sendPaymentSuccessEmail,
   sendRenewalFailedEmail,
   sendRenewalNoticeEmail,
   sendRenewalPriceChangedEmail,
+  sendRenewalPriceLoweredEmail,
 } from "@/lib/emails";
 
 function endOfDay(date: Date): Date {
@@ -76,26 +80,56 @@ async function sendRenewalNotices(now: Date) {
     include: { user: true },
   });
 
+  let lowered = 0;
+
   for (const subscription of subscriptions) {
     if (!subscription.currentPeriodEnd || !subscription.period) continue;
 
-    await sendRenewalNoticeEmail({
-      to: subscription.user.email,
-      name: subscription.user.name,
-      period: subscription.period as BillingPeriod,
-      chargeDate: subscription.currentPeriodEnd,
-      // Сумма из письма — та, о которой человек договаривался, а не текущий
-      // прайс: списать больше без подтверждения мы всё равно не имеем права.
-      amount: Number(subscription.renewalAmount ?? PLAN_PRICES[subscription.period]),
-    });
+    const period = subscription.period as BillingPeriod;
+    const agreed =
+      subscription.renewalAmount === null ? null : Number(subscription.renewalAmount);
+    const current = PLAN_PRICES[period];
+    // Сумма из письма — та, что действительно спишется: не больше согласованной
+    // и не больше текущего прайса.
+    const amount = chargeAmount(agreed, current);
+    const card = formatCard(subscription.cardLast4, subscription.cardNetwork);
+
+    if (priceLowered(agreed, current)) {
+      // Пункт 8.3.3: о снижении уведомляем, подтверждения не спрашиваем.
+      // Отдельного предупреждения о списании не шлём — это письмо называет
+      // и сумму, и дату, и ссылку на отмену, то есть закрывает и п. 8.2.2.
+      await sendRenewalPriceLoweredEmail({
+        to: subscription.user.email,
+        name: subscription.user.name,
+        period,
+        oldAmount: agreed ?? current,
+        newAmount: current,
+        chargeDate: subscription.currentPeriodEnd,
+      });
+      lowered += 1;
+    } else {
+      await sendRenewalNoticeEmail({
+        to: subscription.user.email,
+        name: subscription.user.name,
+        period,
+        chargeDate: subscription.currentPeriodEnd,
+        amount,
+        card,
+      });
+    }
 
     await prisma.subscription.update({
       where: { id: subscription.id },
-      data: { renewalNoticeSentAt: now },
+      data: {
+        renewalNoticeSentAt: now,
+        // Согласованная сумма опускается до новой цены: дальше и списание,
+        // и кабинет должны показывать именно её.
+        renewalAmount: amount,
+      },
     });
   }
 
-  return { renewalNoticesSent: subscriptions.length };
+  return { renewalNoticesSent: subscriptions.length, renewalPriceLowered: lowered };
 }
 
 /**
@@ -147,7 +181,7 @@ async function chargeDueSubscriptions(now: Date) {
     }
 
     const attempt = subscription.renewalAttempts + 1;
-    const amount = agreed ?? current;
+    const amount = chargeAmount(agreed, current);
 
     try {
       const payment = await chargeSavedMethod({
@@ -192,6 +226,7 @@ async function chargeDueSubscriptions(now: Date) {
           data: {
             currentPeriodEnd: periodEnd,
             status: "ACTIVE",
+            renewalAmount: amount,
             renewalAttempts: 0,
             renewalNoticeSentAt: null,
           },
@@ -205,6 +240,7 @@ async function chargeDueSubscriptions(now: Date) {
           autoRenew: true,
           renewalAmount: amount,
           isRenewal: true,
+          card: formatCard(subscription.cardLast4, subscription.cardNetwork),
         });
 
         charged += 1;
@@ -302,6 +338,8 @@ async function expireOverdue(now: Date): Promise<number> {
       // Платёжное средство больше не нужно и не должно храниться дольше цели,
       // ради которой было сохранено.
       yookassaMethodId: null,
+      cardLast4: null,
+      cardNetwork: null,
       renewalAmount: null,
       renewalAttempts: 0,
       renewalNoticeSentAt: null,

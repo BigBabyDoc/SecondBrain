@@ -11,6 +11,17 @@ import { NotePreview } from "@/components/note-preview";
 import { ViewCounter } from "@/components/view-counter";
 import { extractHeadings, leadParagraph } from "@/lib/toc";
 
+/** Сутки: ниже этого порога правку считаем частью публикации, а не обновлением. */
+const DAY_MS = 86_400_000;
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -78,6 +89,24 @@ export default async function NoteDetailPage({
       </div>
       <h1 className="mt-3 text-3xl font-bold [overflow-wrap:anywhere]">{note.title}</h1>
       <p className="mt-3 text-muted [overflow-wrap:anywhere]">{note.excerpt}</p>
+
+      {/* Пункт 4.6 Пользовательского соглашения обещает указывать эти даты.
+          Для справочника по клиническим рекомендациям это не формальность:
+          по дате обновления читатель судит, насколько материал успел устареть.
+          Обновление показываем, только если оно было позже публикации. */}
+      <p className="mt-3 text-xs text-muted">
+        <time dateTime={note.createdAt.toISOString()}>
+          Опубликовано {formatDate(note.createdAt)}
+        </time>
+        {note.updatedAt.getTime() - note.createdAt.getTime() > DAY_MS && (
+          <>
+            {" · "}
+            <time dateTime={note.updatedAt.toISOString()}>
+              обновлено {formatDate(note.updatedAt)}
+            </time>
+          </>
+        )}
+      </p>
 
       {note.tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
