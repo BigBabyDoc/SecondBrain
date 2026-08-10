@@ -4,6 +4,7 @@ import { fetchYookassaPayment } from "@/lib/yookassa";
 import { BillingPeriod, PLAN_PRICES } from "@/lib/access";
 import { sendPaymentSuccessEmail } from "@/lib/emails";
 import { nextPeriodEnd } from "@/lib/renewal";
+import { revokeConsent } from "@/lib/consents";
 
 // ЮKassa не подписывает вебхуки, поэтому мы никогда не доверяем телу запроса напрямую:
 // после уведомления перезапрашиваем статус платежа по API своим секретным ключом.
@@ -58,6 +59,11 @@ export async function POST(request: Request) {
           }
         : {
             autoRenew: false,
+            // Оплата без отметки — это отказ от списаний на новый период.
+            // Держать при этом привязанное средство нельзя: цель, ради которой
+            // оно сохранялось, отпала, а согласия на его использование больше нет.
+            yookassaMethodId: null,
+            renewalAmount: null,
             renewalAttempts: 0,
             renewalNoticeSentAt: null,
           };
@@ -86,6 +92,13 @@ export async function POST(request: Request) {
           },
         }),
       ]);
+
+      // Согласие № 2 в журнале не должно переживать отказ от списаний. IP здесь
+      // не пишем: запрос пришёл от ЮKassa, и её адрес выдавать за адрес
+      // пользователя было бы враньём в юридически значимой записи.
+      if (!autoRenew) {
+        await revokeConsent({ userId: existing.userId, type: "AUTO_RENEWAL", ip: null });
+      }
 
       const user = await prisma.user.findUnique({ where: { id: existing.userId } });
       if (user) {
