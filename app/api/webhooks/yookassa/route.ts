@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchYookassaPayment } from "@/lib/yookassa";
-import { BillingPeriod, PLAN_DURATION_DAYS } from "@/lib/access";
+import { BillingPeriod, PLAN_PRICES } from "@/lib/access";
 import { sendPaymentSuccessEmail } from "@/lib/emails";
+import { nextPeriodEnd } from "@/lib/renewal";
 
 // ЮKassa не подписывает вебхуки, поэтому мы никогда не доверяем телу запроса напрямую:
 // после уведомления перезапрашиваем статус платежа по API своим секретным ключом.
@@ -32,8 +33,34 @@ export async function POST(request: Request) {
   if (payment.status === "succeeded" && payment.paid) {
     if (existing.status !== "SUCCEEDED") {
       const period = (payment.metadata?.period as BillingPeriod) ?? existing.period;
-      const periodEnd = new Date();
-      periodEnd.setDate(periodEnd.getDate() + PLAN_DURATION_DAYS[period]);
+      const subscription = await prisma.subscription.findUnique({
+        where: { userId: existing.userId },
+      });
+
+      const periodEnd = nextPeriodEnd({
+        period,
+        currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+        now: new Date(),
+      });
+
+      // Автопродление включается только при явном согласии: сохранённое
+      // платёжное средство само по себе согласием не является (п. 8.1.2).
+      const autoRenew =
+        payment.metadata?.autoRenew === "1" && Boolean(payment.payment_method?.id);
+
+      const renewalState = autoRenew
+        ? {
+            autoRenew: true,
+            yookassaMethodId: payment.payment_method?.id,
+            renewalAmount: PLAN_PRICES[period],
+            renewalAttempts: 0,
+            renewalNoticeSentAt: null,
+          }
+        : {
+            autoRenew: false,
+            renewalAttempts: 0,
+            renewalNoticeSentAt: null,
+          };
 
       await prisma.$transaction([
         prisma.payment.update({
@@ -46,16 +73,16 @@ export async function POST(request: Request) {
             userId: existing.userId,
             tier: "PAID",
             period,
-            status: "ACTIVE",
+            status: autoRenew ? "ACTIVE" : "CANCELED",
             currentPeriodEnd: periodEnd,
-            yookassaMethodId: payment.payment_method?.id,
+            ...renewalState,
           },
           update: {
             tier: "PAID",
             period,
-            status: "ACTIVE",
+            status: autoRenew ? "ACTIVE" : "CANCELED",
             currentPeriodEnd: periodEnd,
-            yookassaMethodId: payment.payment_method?.id,
+            ...renewalState,
           },
         }),
       ]);
@@ -67,6 +94,12 @@ export async function POST(request: Request) {
           name: user.name,
           period,
           periodEnd,
+          // Письмо об успешной оплате заодно закрывает п. 8.1.3: при подключении
+          // автопродления пользователя нужно уведомить о сумме, периодичности,
+          // дате первого списания и порядке отмены.
+          autoRenew,
+          renewalAmount: PLAN_PRICES[period],
+          isRenewal: existing.kind === "RENEWAL",
         });
       }
     }

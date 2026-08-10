@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { extractHeadings, headingId, headingPalette, type HeadingLevel } from "@/lib/toc";
+import {
+  LEAD_MAX_CHARS,
+  extractHeadings,
+  headingId,
+  headingPalette,
+  leadParagraph,
+  type HeadingLevel,
+} from "@/lib/toc";
 
 describe("extractHeadings", () => {
   it("собирает заголовки трёх уровней по порядку", () => {
@@ -66,5 +73,47 @@ describe("headingPalette", () => {
       const p = headingPalette(level);
       expect(p.dot.replace("bg-", "")).toBe(p.text.replace("text-", ""));
     }
+  });
+});
+
+describe("leadParagraph", () => {
+  it("берёт первый абзац, пропуская заголовок", () => {
+    const md = "# Заголовок\n\nПервый абзац заметки.\n\nВторой абзац.";
+    expect(leadParagraph(md)).toBe("Первый абзац заметки.");
+  });
+
+  it("склеивает строки одного абзаца", () => {
+    expect(leadParagraph("Строка одна\nстрока два\n\nдругой абзац")).toBe(
+      "Строка одна строка два"
+    );
+  });
+
+  it("пропускает список и берёт текст после него", () => {
+    const md = "## Раздел\n\n- пункт\n- пункт\n\nСвязный текст.";
+    expect(leadParagraph(md)).toBe("Связный текст.");
+  });
+
+  it("не заглядывает внутрь блока кода", () => {
+    const md = "```\nконстанта = 1\n```\n\nОбычный текст.";
+    expect(leadParagraph(md)).toBe("Обычный текст.");
+  });
+
+  it("снимает разметку выделения и разворачивает ссылку", () => {
+    expect(leadParagraph("**Жирный** и [ссылка](https://example.com) внутри.")).toBe(
+      "Жирный и ссылка внутри."
+    );
+  });
+
+  it("обрезает длинный абзац по границе слова", () => {
+    const long = "слово ".repeat(200).trim();
+    const lead = leadParagraph(long);
+
+    expect(lead.length).toBeLessThanOrEqual(LEAD_MAX_CHARS + 1);
+    expect(lead.endsWith("…")).toBe(true);
+    expect(lead).not.toContain("сло…");
+  });
+
+  it("возвращает пустую строку, если связного текста нет", () => {
+    expect(leadParagraph("# Только заголовок\n\n| a | b |\n| - | - |")).toBe("");
   });
 });

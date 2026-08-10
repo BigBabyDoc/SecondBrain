@@ -31,6 +31,60 @@ export function headingId(text: string, index: number): string {
   return base ? `${base}-${index}` : `razdel-${index}`;
 }
 
+/** Сколько символов вступления показываем в витрине закрытой заметки. */
+export const LEAD_MAX_CHARS = 320;
+
+/**
+ * Первый абзац заметки — для витрины закрытого материала. Заголовки, блоки
+ * кода, списки, таблицы и цитаты пропускаются: нужен связный текст, а не
+ * обрывок разметки.
+ *
+ * Возвращается только один абзац и не длиннее LEAD_MAX_CHARS: это анонс, а не
+ * способ прочитать платную заметку по кусочкам.
+ */
+export function leadParagraph(markdown: string): string {
+  const lines = markdown.split("\n");
+  const collected: string[] = [];
+  let insideFence = false;
+
+  for (const line of lines) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      insideFence = !insideFence;
+      continue;
+    }
+    if (insideFence) continue;
+
+    const trimmed = line.trim();
+
+    if (trimmed === "") {
+      // Пустая строка закрывает абзац — но только если он уже начался.
+      if (collected.length > 0) break;
+      continue;
+    }
+    // Всё, что не обычный текст: заголовки, списки, таблицы, цитаты, картинки.
+    if (/^(#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\||!\[)/.test(trimmed)) {
+      if (collected.length > 0) break;
+      continue;
+    }
+
+    collected.push(trimmed);
+  }
+
+  // Убираем разметку выделения и ссылки: `[текст](url)` → `текст`.
+  const text = collected
+    .join(" ")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`]/g, "")
+    .trim();
+
+  if (text.length <= LEAD_MAX_CHARS) return text;
+
+  // Режем по границе слова, чтобы анонс не обрывался на половине слова.
+  const cut = text.slice(0, LEAD_MAX_CHARS);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
 /**
  * Достаёт заголовки первых четырёх уровней из markdown в порядке появления.
  * Содержимое ``` -блоков пропускается: строка вида `# комментарий` внутри

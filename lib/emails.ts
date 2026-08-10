@@ -1,11 +1,16 @@
 import { baseUrl, sendMail } from "@/lib/mail";
-import { BillingPeriod, PLAN_LABELS } from "@/lib/access";
+import { BillingPeriod, PLAN_LABELS, PLAN_RENEWAL_CADENCE } from "@/lib/access";
+import { RENEWAL_NOTICE_DAYS } from "@/lib/renewal";
 import { EMAIL_VERIFICATION_TTL_HOURS, PASSWORD_RESET_TTL_MINUTES } from "@/lib/tokens";
 
 const SIGNATURE = "\n\n—\nВторой мозг педиатра\nБыстро. Удобно. Достоверно.";
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("ru-RU");
+}
+
+function formatMoney(amount: number): string {
+  return `${amount} ₽`;
 }
 
 export async function sendVerificationEmail(params: {
@@ -51,15 +56,37 @@ export async function sendPaymentSuccessEmail(params: {
   name: string;
   period: BillingPeriod;
   periodEnd: Date;
+  autoRenew: boolean;
+  renewalAmount: number;
+  isRenewal: boolean;
 }) {
+  const opening = params.isRenewal
+    ? `${params.name}, подписка продлена.\n\n`
+    : `${params.name}, спасибо за оплату!\n\n`;
+
+  // Пункт 8.1.3 оферты: при подключении автопродления пользователю сообщаются
+  // сумма, периодичность, дата первого списания и порядок отмены. Это письмо —
+  // ближайшая к подключению точка, где всё четыре пункта можно назвать сразу.
+  const renewalBlock = params.autoRenew
+    ? `\n\nАвтопродление подключено. ${formatMoney(params.renewalAmount)} будет списываться ` +
+      `${PLAN_RENEWAL_CADENCE[params.period]}; ближайшее списание — ` +
+      `${formatDate(params.periodEnd)}. Мы предупредим о нём письмом за ` +
+      `${RENEWAL_NOTICE_DAYS} дня. Отключить автопродление можно в любой момент ` +
+      `в личном кабинете: ${baseUrl()}/account`
+    : `\n\nПодписка не продлевается автоматически: следующий период оплачивается ` +
+      `вручную в личном кабинете.`;
+
   await sendMail({
     to: params.to,
-    subject: "Подписка активирована — Второй мозг педиатра",
+    subject: params.isRenewal
+      ? "Подписка продлена — Второй мозг педиатра"
+      : "Подписка активирована — Второй мозг педиатра",
     text:
-      `${params.name}, спасибо за оплату!\n\n` +
+      opening +
       `Подписка «${PLAN_LABELS[params.period]}» активна до ${formatDate(params.periodEnd)}. ` +
-      `Вся библиотека заметок уже открыта: ${baseUrl()}/notes\n\n` +
-      `Чек по платежу придёт отдельным письмом от сервиса «Мой налог».` +
+      `Вся библиотека заметок открыта: ${baseUrl()}/notes` +
+      renewalBlock +
+      `\n\nЧек по платежу придёт отдельным письмом от сервиса «Мой налог».` +
       SIGNATURE,
   });
 }
@@ -79,6 +106,106 @@ export async function sendExpiryReminderEmail(params: {
       `Ваша подписка действует ещё ${days} — до ${formatDate(params.periodEnd)}. ` +
       `Продлить можно в личном кабинете: ${baseUrl()}/account\n\n` +
       `После окончания останется доступ к бесплатным заметкам.` +
+      SIGNATURE,
+  });
+}
+
+/**
+ * Предупреждение о предстоящем автосписании — п. 8.2.2 оферты. Обязательные
+ * элементы: сумма, дата списания и прямая ссылка для отмены. Не «напоминание
+ * о подписке», а именно уведомление о том, что деньги спишутся.
+ */
+export async function sendRenewalNoticeEmail(params: {
+  to: string;
+  name: string;
+  period: BillingPeriod;
+  chargeDate: Date;
+  amount: number;
+}) {
+  await sendMail({
+    to: params.to,
+    subject: "Подписка продлится автоматически — Второй мозг педиатра",
+    text:
+      `${params.name}, здравствуйте!\n\n` +
+      `${formatDate(params.chargeDate)} мы автоматически спишем ` +
+      `${formatMoney(params.amount)} за следующий период подписки ` +
+      `«${PLAN_LABELS[params.period]}».\n\n` +
+      `Если продлевать не нужно, отключите автопродление до этой даты — ` +
+      `деньги не спишутся: ${baseUrl()}/account\n\n` +
+      `Доступ к оплаченному периоду сохраняется до его окончания в любом случае.` +
+      SIGNATURE,
+  });
+}
+
+/**
+ * Списание не прошло после всех попыток — п. 8.2.4. Важная часть: сказать, что
+ * задолженности не возникает, иначе письмо читается как счёт к оплате.
+ */
+export async function sendRenewalFailedEmail(params: {
+  to: string;
+  name: string;
+  period: BillingPeriod;
+  periodEnd: Date;
+}) {
+  await sendMail({
+    to: params.to,
+    subject: "Не удалось продлить подписку — Второй мозг педиатра",
+    text:
+      `${params.name}, здравствуйте!\n\n` +
+      `Мы не смогли списать оплату за следующий период подписки ` +
+      `«${PLAN_LABELS[params.period]}» — банк отклонил платёж. Автопродление отключено, ` +
+      `новых попыток не будет.\n\n` +
+      `Доступ к платным материалам сохраняется до ${formatDate(params.periodEnd)}. ` +
+      `Продлить вручную можно в личном кабинете: ${baseUrl()}/account\n\n` +
+      `Никакой задолженности за непродлённый период у вас не возникает.` +
+      SIGNATURE,
+  });
+}
+
+/** Подтверждение отмены автопродления — п. 8.4.6 оферты. */
+export async function sendAutoRenewalCanceledEmail(params: {
+  to: string;
+  name: string;
+  period: BillingPeriod;
+  periodEnd: Date;
+}) {
+  await sendMail({
+    to: params.to,
+    subject: "Автопродление отключено — Второй мозг педиатра",
+    text:
+      `${params.name}, здравствуйте!\n\n` +
+      `Автопродление подписки «${PLAN_LABELS[params.period]}» отключено, ` +
+      `привязанное платёжное средство удалено. Списаний больше не будет.\n\n` +
+      `Доступ к платным материалам сохраняется до ${formatDate(params.periodEnd)} — ` +
+      `этот период уже оплачен. Дальше подписку можно продлить вручную ` +
+      `в личном кабинете: ${baseUrl()}/account` +
+      SIGNATURE,
+  });
+}
+
+/**
+ * Тариф подорожал — п. 8.3.2: списание по новой цене возможно только после
+ * отдельного подтверждения, поэтому автопродление приостанавливается.
+ */
+export async function sendRenewalPriceChangedEmail(params: {
+  to: string;
+  name: string;
+  period: BillingPeriod;
+  periodEnd: Date;
+  oldAmount: number;
+  newAmount: number;
+}) {
+  await sendMail({
+    to: params.to,
+    subject: "Изменилась стоимость подписки — Второй мозг педиатра",
+    text:
+      `${params.name}, здравствуйте!\n\n` +
+      `Стоимость подписки «${PLAN_LABELS[params.period]}» изменилась: было ` +
+      `${formatMoney(params.oldAmount)}, стало ${formatMoney(params.newAmount)}.\n\n` +
+      `Автоматическое списание приостановлено — по новой цене мы не спишем ничего ` +
+      `без вашего подтверждения. Чтобы продолжить подписку, оформите её в личном ` +
+      `кабинете: ${baseUrl()}/account\n\n` +
+      `Доступ по текущей оплате сохраняется до ${formatDate(params.periodEnd)}.` +
       SIGNATURE,
   });
 }

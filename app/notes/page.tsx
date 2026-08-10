@@ -3,6 +3,7 @@ import { NoteSearch } from "@/components/note-search";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
+import { METRIKA_GOALS, MetrikaGoal } from "@/components/metrika-goal";
 
 export const metadata = {
   title: "Заметки — Второй мозг педиатра",
@@ -30,7 +31,7 @@ function buildHref(params: { q: string; tag: string; page: number }): string {
 export default async function NotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; tag?: string; page?: string; registered?: string }>;
 }) {
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
@@ -38,6 +39,10 @@ export default async function NotesPage({
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const session = await auth();
+  // Метка регистрации приходит только с редиректа после signIn — по ней
+  // отмечается цель в Метрике. Учитываем её лишь для вошедшего пользователя,
+  // чтобы ссылка с параметром, отправленная кому-то ещё, ничего не считала.
+  const justRegistered = params.registered === "1" && Boolean(session?.user);
   let userTier: TierName = "FREE";
   if (session?.user) {
     const subscription = await prisma.subscription.findUnique({
@@ -79,6 +84,10 @@ export default async function NotesPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
+      {justRegistered && (
+        <MetrikaGoal goal={METRIKA_GOALS.registration} dedupeKey={session?.user.id} />
+      )}
+
       <h1 className="text-3xl font-bold">Заметки</h1>
       <p className="mt-2 text-muted">
         Клинические заметки педиатра. Часть — в открытом доступе, остальные открываются по

@@ -110,22 +110,36 @@ the *pages*, but actions are separately reachable and must re-check the role the
 **Payment flow (YooKassa):**
 
 1. `createPaymentAction` (`lib/actions/payment.ts`) requires a **verified** email — the fiscal receipt
-   is sent to that address — then creates a YooKassa payment with `save_payment_method: true`,
-   `metadata: { userId, period }` and a `receipt` block. The receipt is what makes the payment legal
-   for a self-employed (НПД) merchant via «Мой налог»; never drop it. A PENDING `Payment` row keyed
-   by `yookassaPaymentId` is written before redirecting to the confirmation URL.
+   is sent to that address — then creates a YooKassa payment with a `receipt` block. The receipt is
+   what makes the payment legal for a self-employed (НПД) merchant via «Мой налог»; never drop it,
+   including on renewals. `save_payment_method` mirrors an **opt-in checkbox**, unchecked by default:
+   §8.1.2 of the offer requires that paying without binding a card stay possible, so the flag also
+   travels in `metadata.autoRenew` and an `AUTO_RENEWAL` consent row is written. A PENDING `Payment`
+   row keyed by `yookassaPaymentId` is written before redirecting to the confirmation URL.
 2. `app/api/webhooks/yookassa/route.ts` **never trusts the webhook body** — YooKassa does not sign
    requests, so it takes only the payment id and re-fetches the payment via the API with the secret
    key. On `succeeded` it runs a transaction: mark the `Payment` SUCCEEDED and upsert the
-   `Subscription` to PAID with `currentPeriodEnd = now + PLAN_DURATION_DAYS[period]` and the saved
-   `yookassaMethodId`, then emails a confirmation. It is idempotent (skips if already SUCCEEDED).
-   Preserve both properties.
-3. `POST /api/cron/subscriptions` (guarded by `CRON_SECRET`, called by the host's scheduler)
-   downgrades subscriptions past `currentPeriodEnd` and emails a reminder 3 days before expiry.
-   Cancelling (`lib/actions/subscription.ts`) only clears `yookassaMethodId` and sets CANCELED —
-   access survives to the end of the paid period, because that period is already paid for.
-4. Charging the saved `yookassaMethodId` for automatic renewal is **not implemented**: the method id
-   is stored, but nothing ever debits it.
+   `Subscription` to PAID with `currentPeriodEnd` from `nextPeriodEnd()` and — only when the payment
+   carried `autoRenew` — the saved `yookassaMethodId` and agreed `renewalAmount`, then emails a
+   confirmation. It is idempotent (skips if already SUCCEEDED). Preserve both properties.
+3. `POST /api/cron/subscriptions` (guarded by `CRON_SECRET`, called by the host's scheduler daily)
+   runs four ordered steps: renewal notice → charge → expiry reminder → downgrade. The order matters:
+   charging must happen before the subscription is expired.
+4. **Automatic renewal is live** and implemented to §8 of the offer — that section is the spec, read
+   it before changing anything here. `lib/renewal.ts` holds the shared rules: extend from the old
+   `currentPeriodEnd` when it is still in the future (paying early must not burn remaining days), a
+   **deterministic** idempotence key per (subscription, period end, attempt) so a crashed job cannot
+   double-charge, at most 3 attempts, and a price-increase guard that pauses renewal instead of
+   charging more than the user agreed to. `Subscription.autoRenew` — not `status` — is the single
+   flag the job reads.
+5. Cancelling (`lib/actions/subscription.ts`) is **one action** that turns off renewal, deletes
+   `yookassaMethodId` and revokes the consent (§8.4.1–8.4.4 — the cancel path may not be harder than
+   the opt-in). Access survives to the end of the paid period, because that period is already paid
+   for. There is deliberately **no "resume" button**: the method is gone, and §8.4.4 requires a fresh
+   consent, which is given at the next payment.
+6. `AUTO_RENEWAL_ENABLED` in `lib/legal.ts` gates the whole feature. Turning it off hides the opt-in
+   checkbox, stops charges, and re-adds the «раздел не применяется» notice to offer §8 — keep the
+   flag and the code in step, so the contract never promises what the service does not do.
 
 Webhook URL to configure in the YooKassa dashboard: `<NEXTAUTH_URL>/api/webhooks/yookassa`.
 
@@ -134,6 +148,24 @@ suffixes a base36 timestamp on collision; slugs are not regenerated on update, s
 keeps its URL. Actions `revalidatePath` `/notes` and `/admin/notes` after writes. The editor
 (`components/note-form.tsx`) toggles between editing and a Markdown preview; the textarea stays
 mounted and merely hidden in preview mode, because unmounting it would drop `content` from the form.
+
+**Admin pages re-check the role themselves.** `proxy.ts` protects `/admin`, but a server component is
+also reachable through a direct RSC request, so `/admin/notes` and `/admin/payments` both call `auth()`
+and `notFound()` on a non-admin. `/admin/payments` is the reconciliation view for «Мой налог»: revenue
+per range from SUCCEEDED payments only, plus subscriber and auto-renewal counts.
+
+**Locked notes still sell.** `app/notes/[slug]/page.tsx` computes headings for *every* note and, when
+access fails, renders `components/note-preview.tsx` — section headings plus `leadParagraph()`, one
+paragraph capped at `LEAD_MAX_CHARS`. `note.content` itself is still never sent to the client; keep it
+that way when touching the preview.
+
+**View counts** are incremented by the browser (`components/view-counter.tsx` → `POST
+/api/notes/[slug]/view`), once per tab per note via `sessionStorage`. Counting during the server render
+would inflate on prefetch, revalidation and crawlers. Sorted view in `/admin/notes?sort=views`.
+
+**Metrika goals** (`lib/metrika.ts`) fire only when the counter exists — it loads solely after cookie
+consent, so a missing `ym` is normal, not an error. `MetrikaGoal` dedupes via `localStorage`, keyed by
+payment id for `payment_success` so a page refresh cannot invent a second sale.
 
 **Media.** Uploads (`POST /api/admin/media`, admin only) are content-addressed: the storage key is
 the sha256 of the bytes, so re-uploading the same file returns the existing object instead of a

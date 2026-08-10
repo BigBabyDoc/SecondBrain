@@ -7,7 +7,9 @@ import { TIER_LABELS, TierName, hasTierAccess } from "@/lib/access";
 import { Markdown } from "@/components/markdown";
 import { NoteToc } from "@/components/note-toc";
 import { BackToTop } from "@/components/back-to-top";
-import { extractHeadings } from "@/lib/toc";
+import { NotePreview } from "@/components/note-preview";
+import { ViewCounter } from "@/components/view-counter";
+import { extractHeadings, leadParagraph } from "@/lib/toc";
 
 export async function generateMetadata({
   params,
@@ -54,10 +56,15 @@ export default async function NoteDetailPage({
 
   const requiredTier = note.tier as TierName;
   const hasAccess = hasTierAccess(userTier, requiredTier);
-  const headings = hasAccess ? extractHeadings(note.content) : [];
+
+  // Заголовки нужны в обоих случаях: открытой заметке — как оглавление,
+  // закрытой — как витрина. Сам текст в браузер по-прежнему не уходит.
+  const headings = extractHeadings(note.content);
+  const lead = hasAccess ? "" : leadParagraph(note.content);
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      <ViewCounter slug={note.slug} />
       {/* Флекс с gap, а не пробел в разметке: JSX съедает пробел между
           элементами, если между ними перенос строки. */}
       <div className="flex flex-wrap items-center gap-3">
@@ -99,7 +106,9 @@ export default async function NoteDetailPage({
             </p>
           </>
         ) : (
-          <div className="rounded-2xl border border-border bg-background-elevated p-8 text-center">
+          <div className="rounded-2xl border border-border bg-background-elevated p-6 text-center sm:p-8">
+            <NotePreview headings={headings} lead={lead} />
+
             <p className="text-lg font-semibold">
               Эта заметка доступна на тарифе «{TIER_LABELS[requiredTier]}»
             </p>

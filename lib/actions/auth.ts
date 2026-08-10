@@ -81,10 +81,12 @@ export async function registerAction(
 
   await issueEmailVerification(user);
 
+  // Метка в адресе — единственный способ узнать на странице, что визит пришёл
+  // из регистрации: сессия одинаковая и у новичка, и у вернувшегося.
   await signIn("credentials", {
     email,
     password,
-    redirectTo: "/notes",
+    redirectTo: "/notes?registered=1",
   });
 
   return {};

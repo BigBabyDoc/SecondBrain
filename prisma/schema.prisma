@@ -39,6 +39,15 @@ enum PaymentStatus {
   CANCELED
 }
 
+/// Кто инициировал платёж. Разделение нужно и для отчётности, и для вебхука:
+/// у автосписания нет подтверждения от пользователя, оно приходит сразу succeeded.
+enum PaymentKind {
+  /// Оплата, начатая пользователем на сайте
+  INITIAL
+  /// Автосписание по сохранённому платёжному средству (раздел 8 оферты)
+  RENEWAL
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -132,6 +141,19 @@ model Subscription {
   status             SubscriptionStatus @default(ACTIVE)
   currentPeriodEnd   DateTime?
   yookassaMethodId   String?
+  /// Единственный признак, по которому задача продления решает списывать или нет.
+  /// По п. 8.1.2 оферты оплата без привязки средства обязана быть возможна,
+  /// поэтому «оплатил без автопродления» и «отключил автопродление» — это одно
+  /// состояние (false), а не два разных статуса.
+  autoRenew          Boolean            @default(false)
+  /// Стоимость, о которой пользователь был уведомлён при подключении.
+  /// По п. 8.3.2 при её росте списание приостанавливается до подтверждения.
+  renewalAmount      Decimal?           @db.Decimal(10, 2)
+  /// Неудачные попытки списания в текущем цикле: по п. 8.2.4 их не больше трёх.
+  renewalAttempts    Int                @default(0)
+  /// Когда ушло уведомление о предстоящем списании — чтобы не слать его дважды
+  /// (п. 8.2.2 требует одного предупреждения не позднее чем за 3 дня).
+  renewalNoticeSentAt DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 }
@@ -145,9 +167,12 @@ model Payment {
   amount          Decimal       @db.Decimal(10, 2)
   currency        String        @default("RUB")
   status          PaymentStatus @default(PENDING)
+  kind            PaymentKind   @default(INITIAL)
   yookassaPaymentId String      @unique
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  @@index([status, createdAt])
 }
 
 /// Загруженные файлы адресуются по содержимому: ключ хранения — sha256 байтов,
@@ -176,6 +201,10 @@ model Note {
   tier      Tier     @default(FREE)
   tags      String[] @default([])
   published Boolean  @default(true)
+  /// Счётчик открытий заметки. Инкремент шлёт браузер один раз за сессию
+  /// (components/view-counter.tsx): рендер на сервере повторяется при
+  /// префетче и перепроверке, и счётчик от этого раздувался бы.
+  views     Int      @default(0)
   authorId  String
   author    User     @relation("NoteAuthor", fields: [authorId], references: [id])
   createdAt DateTime @default(now())

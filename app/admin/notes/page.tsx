@@ -1,9 +1,31 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { TIER_LABELS, TierName } from "@/lib/access";
+import { AdminNav } from "@/components/admin-nav";
 
-export default async function AdminNotesPage() {
-  const notes = await prisma.note.findMany({ orderBy: { createdAt: "desc" } });
+/** Сортировки списка. Ключи попадают в адрес, поэтому проверяются явно. */
+const ORDERS = {
+  new: { label: "Сначала новые", orderBy: { createdAt: "desc" } },
+  views: { label: "По просмотрам", orderBy: { views: "desc" } },
+} as const;
+
+type OrderKey = keyof typeof ORDERS;
+
+export default async function AdminNotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string }>;
+}) {
+  // proxy.ts закрывает /admin по роли, но страница обязана проверить сама:
+  // серверный компонент достижим и в обход маршрутизации (RSC-запрос).
+  const session = await auth();
+  if (session?.user.role !== "ADMIN") notFound();
+
+  const params = await searchParams;
+  const sort: OrderKey = params.sort === "views" ? "views" : "new";
+  const notes = await prisma.note.findMany({ orderBy: ORDERS[sort].orderBy });
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
@@ -17,13 +39,34 @@ export default async function AdminNotesPage() {
         </Link>
       </div>
 
-      <div className="mt-8 overflow-x-auto rounded-xl border border-border">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <AdminNav current="/admin/notes" />
+        <div className="flex gap-2 text-sm">
+          {(Object.keys(ORDERS) as OrderKey[]).map((key) => (
+            <Link
+              key={key}
+              href={key === "new" ? "/admin/notes" : `/admin/notes?sort=${key}`}
+              aria-current={key === sort ? "true" : undefined}
+              className={
+                key === sort
+                  ? "rounded-full border border-brand-blue px-4 py-2 text-brand-blue"
+                  : "rounded-full border border-border px-4 py-2 text-muted hover:border-brand-blue hover:text-brand-blue"
+              }
+            >
+              {ORDERS[key].label}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead className="bg-background-elevated text-left text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">Заголовок</th>
               <th className="px-4 py-2 font-medium">Тариф</th>
               <th className="px-4 py-2 font-medium">Статус</th>
+              <th className="px-4 py-2 font-medium">Просмотры</th>
               <th className="px-4 py-2 font-medium">Обновлена</th>
               <th className="px-4 py-2" />
             </tr>
@@ -40,6 +83,7 @@ export default async function AdminNotesPage() {
                     <span className="text-muted">черновик</span>
                   )}
                 </td>
+                <td className="px-4 py-2 tabular-nums">{note.views}</td>
                 <td className="px-4 py-2 text-muted">
                   {new Date(note.updatedAt).toLocaleDateString("ru-RU")}
                 </td>

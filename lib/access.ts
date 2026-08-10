@@ -37,3 +37,12 @@ export const PLAN_DURATION_DAYS: Record<BillingPeriod, number> = {
   MONTHLY: 30,
   YEARLY: 365,
 };
+
+/**
+ * Как часто повторяется списание — отдельно от PLAN_LABELS: подставлять метку
+ * в предложение нельзя, из «1 месяц» получается «раз в 1 месяц».
+ */
+export const PLAN_RENEWAL_CADENCE: Record<BillingPeriod, string> = {
+  MONTHLY: "раз в месяц",
+  YEARLY: "раз в год",
+};

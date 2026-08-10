@@ -5,8 +5,10 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createYookassaPayment } from "@/lib/yookassa";
 import { BillingPeriod } from "@/lib/access";
+import { AUTO_RENEWAL_ENABLED } from "@/lib/legal";
+import { grantConsent, requestIp } from "@/lib/consents";
 
-export async function createPaymentAction(period: BillingPeriod) {
+export async function createPaymentAction(period: BillingPeriod, formData: FormData) {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
@@ -25,6 +27,11 @@ export async function createPaymentAction(period: BillingPeriod) {
     redirect("/account?payment=unverified");
   }
 
+  // Отметка снята по умолчанию: п. 8.1.2 оферты требует, чтобы оплата без
+  // привязки платёжного средства оставалась доступной, а согласие на списания
+  // было отдельным действием пользователя.
+  const autoRenew = AUTO_RENEWAL_ENABLED && formData.get("autoRenew") === "on";
+
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
   const payment = await createYookassaPayment({
@@ -32,6 +39,7 @@ export async function createPaymentAction(period: BillingPeriod) {
     userEmail: session.user.email,
     period,
     returnUrl: `${baseUrl}/account?payment=pending`,
+    saveMethod: autoRenew,
   });
 
   await prisma.payment.create({
@@ -42,9 +50,22 @@ export async function createPaymentAction(period: BillingPeriod) {
       amount: payment.amount.value,
       currency: payment.amount.currency,
       status: "PENDING",
+      kind: "INITIAL",
       yookassaPaymentId: payment.id,
     },
   });
+
+  // Согласие № 2 фиксируется в момент, когда пользователь его дал, а не когда
+  // деньги дошли: п. 8.1.4 требует зафиксировать дату, время и параметры
+  // подписки на момент предоставления согласия. Если оплата сорвётся,
+  // автопродление всё равно не включится — оно включается вебхуком.
+  if (autoRenew) {
+    await grantConsent({
+      userId: session.user.id,
+      type: "AUTO_RENEWAL",
+      ip: await requestIp(),
+    });
+  }
 
   if (!payment.confirmation?.confirmation_url) {
     throw new Error("ЮKassa не вернула ссылку на оплату");

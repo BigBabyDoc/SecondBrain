@@ -1,15 +1,21 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { BILLING_PERIODS, BillingPeriod, PLAN_LABELS, TIER_LABELS, TierName } from "@/lib/access";
+import {
+  BILLING_PERIODS,
+  BillingPeriod,
+  PLAN_LABELS,
+  PLAN_PRICES,
+  TIER_LABELS,
+  TierName,
+} from "@/lib/access";
 import { UpgradeButton } from "@/components/upgrade-button";
 import { resendVerificationAction } from "@/lib/actions/email-verification";
-import {
-  cancelSubscriptionAction,
-  resumeSubscriptionAction,
-} from "@/lib/actions/subscription";
+import { cancelSubscriptionAction } from "@/lib/actions/subscription";
 import { AccountPrivacy, type PaidAccess } from "@/components/account-privacy";
 import { AUTO_RENEWAL_ENABLED } from "@/lib/legal";
+import { RENEWAL_NOTICE_DAYS } from "@/lib/renewal";
 import { hasActiveConsent } from "@/lib/consents";
+import { METRIKA_GOALS, MetrikaGoal } from "@/components/metrika-goal";
 
 export const metadata = {
   title: "Личный кабинет — Второй мозг педиатра",
@@ -95,11 +101,30 @@ export default async function AccountPage({
   const currentPeriod = (subscription?.period as BillingPeriod | null) ?? null;
   const isPaid = currentTier === "PAID";
   const paidAccess = remainingPaidAccess(isPaid, subscription?.currentPeriodEnd ?? null);
-  const isCanceled = subscription?.status === "CANCELED";
+  // Без автопродления оплаченный период — это срок, после которого доступ
+  // закроется, а не «действует до следующего списания».
+  const isCanceled = isPaid && !subscription?.autoRenew;
   const emailVerified = Boolean(user?.emailVerified);
+  const autoRenew = AUTO_RENEWAL_ENABLED && Boolean(subscription?.autoRenew);
+  const succeededPayment = payments.find((payment) => payment.status === "SUCCEEDED") ?? null;
+  // Показываем сумму, о которой человек договаривался: если тариф с тех пор
+  // подорожал, списания по новой цене всё равно не будет без подтверждения.
+  const renewalAmount =
+    subscription?.renewalAmount !== null && subscription?.renewalAmount !== undefined
+      ? Number(subscription.renewalAmount)
+      : currentPeriod
+        ? PLAN_PRICES[currentPeriod]
+        : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      {/* Цель отмечается по факту зачисления денег, а не по возврату с ЮKassa:
+          на страницу пользователь попадает и при отменённом платеже. Ключ —
+          идентификатор платежа, поэтому обновление вкладки продажу не удвоит. */}
+      {succeededPayment && (
+        <MetrikaGoal goal={METRIKA_GOALS.paymentSuccess} dedupeKey={succeededPayment.id} />
+      )}
+
       <h1 className="text-3xl font-bold">Личный кабинет</h1>
       <p className="mt-2 text-muted">{session.user.name} · {session.user.email}</p>
 
@@ -156,9 +181,17 @@ export default async function AccountPage({
           )}
         </div>
 
-        {/* Пока автосписание не запущено, обещать «отключение автопродления» нельзя:
-            подписка и так не продлевается сама. */}
-        {!AUTO_RENEWAL_ENABLED && isPaid && (
+        {isPaid && autoRenew && (
+          <p className="mt-4 rounded-lg border border-border p-3 text-sm text-muted">
+            Автопродление включено: {renewalAmount} ₽ спишутся{" "}
+            {subscription?.currentPeriodEnd
+              ? new Date(subscription.currentPeriodEnd).toLocaleDateString("ru-RU")
+              : "в день окончания периода"}
+            . Мы предупредим письмом за {RENEWAL_NOTICE_DAYS} дня — отменить успеете.
+          </p>
+        )}
+
+        {isPaid && !autoRenew && (
           <p className="mt-4 rounded-lg border border-border p-3 text-sm text-muted">
             Подписка не продлевается автоматически: деньги списываются только когда вы сами
             оплачиваете следующий период. По окончании оплаченного срока доступ к платным
@@ -166,38 +199,25 @@ export default async function AccountPage({
           </p>
         )}
 
-        {AUTO_RENEWAL_ENABLED && isCanceled && (
-          <p className="mt-4 rounded-lg border border-border p-3 text-sm text-muted">
-            Автопродление отключено. Доступ сохраняется до конца оплаченного периода, деньги
-            больше списываться не будут.
-          </p>
+        {/* Отключение — одно действие без промежуточных экранов: п. 8.4.2 оферты
+            запрещает делать отмену сложнее подключения. Кнопки «возобновить» нет:
+            платёжное средство при отмене удаляется, и по п. 8.4.4 списания по нему
+            невозможны — автопродление подключается заново при следующей оплате. */}
+        {isPaid && autoRenew && (
+          <form action={cancelSubscriptionAction} className="mt-4">
+            <button className="-my-1 py-2 text-sm text-muted hover:text-red-400">
+              Отключить автопродление и удалить платёжное средство
+            </button>
+          </form>
         )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {BILLING_PERIODS.filter(
-            (period) => !(isPaid && currentPeriod === period && !isCanceled)
+            (period) => !(isPaid && currentPeriod === period && autoRenew)
           ).map((period) => (
             <UpgradeButton key={period} period={period} disabled={!emailVerified} />
           ))}
         </div>
-
-        {AUTO_RENEWAL_ENABLED && isPaid && (
-          <div className="mt-4">
-            {isCanceled ? (
-              <form action={resumeSubscriptionAction}>
-                <button className="text-sm text-brand-blue hover:underline">
-                  Возобновить автопродление
-                </button>
-              </form>
-            ) : (
-              <form action={cancelSubscriptionAction}>
-                <button className="text-sm text-muted hover:text-red-400">
-                  Отключить автопродление
-                </button>
-              </form>
-            )}
-          </div>
-        )}
       </section>
 
       <AccountPrivacy marketingEnabled={marketingEnabled} paidAccess={paidAccess} />
