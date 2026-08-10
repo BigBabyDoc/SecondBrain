@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { TIER_LABELS, TierName } from "@/lib/access";
 import { AdminNav } from "@/components/admin-nav";
+import { VIEWS, plural } from "@/lib/plural";
 
 /** Сортировки списка. Ключи попадают в адрес, поэтому проверяются явно. */
 const ORDERS = {
@@ -59,7 +60,37 @@ export default async function AdminNotesPage({
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-border">
+      {/* На телефоне шесть колонок за экран не помещаются, и просмотры со
+          ссылкой на правку оказываются в невидимой части таблицы. До sm —
+          карточки с теми же данными. */}
+      <ul className="mt-6 space-y-3 sm:hidden">
+        {notes.map((note) => (
+          <li
+            key={note.id}
+            className="rounded-xl border border-border bg-background-elevated p-4 text-sm"
+          >
+            <p className="font-medium [overflow-wrap:anywhere]">{note.title}</p>
+            <p className="mt-2 text-xs text-muted">
+              {TIER_LABELS[note.tier as TierName]} ·{" "}
+              {note.published ? (
+                <span className="text-brand-green">опубликована</span>
+              ) : (
+                "черновик"
+              )}{" "}
+              · {note.views} {plural(note.views, VIEWS)} ·{" "}
+              {new Date(note.updatedAt).toLocaleDateString("ru-RU")}
+            </p>
+            <Link
+              href={`/admin/notes/${note.id}/edit`}
+              className="mt-2 inline-block py-2 text-brand-blue hover:underline"
+            >
+              Редактировать
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-6 hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full text-sm">
           <thead className="bg-background-elevated text-left text-muted">
             <tr>

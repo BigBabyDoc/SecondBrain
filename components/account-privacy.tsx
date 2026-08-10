@@ -3,26 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { deleteAccountAction, setMarketingConsentAction } from "@/lib/actions/account";
+import { DAYS, plural } from "@/lib/plural";
 
 const CONFIRM_WORD = "УДАЛИТЬ";
 
 /** Оплаченный доступ, который пропадёт при удалении. null — платной подписки нет. */
 export type PaidAccess = { endsAt: string; daysLeft: number };
-
-function pluralDays(count: number): string {
-  const tail = count % 100;
-  if (tail >= 11 && tail <= 14) return "дней";
-  switch (count % 10) {
-    case 1:
-      return "день";
-    case 2:
-    case 3:
-    case 4:
-      return "дня";
-    default:
-      return "дней";
-  }
-}
 
 export function AccountPrivacy({
   marketingEnabled,
@@ -83,7 +69,7 @@ export function AccountPrivacy({
               <p className="rounded-lg border border-red-400/40 bg-red-400/10 p-3 text-red-300">
                 У вас оплачен доступ до {paidAccess.endsAt} — это ещё{" "}
                 <strong>
-                  {paidAccess.daysLeft} {pluralDays(paidAccess.daysLeft)}
+                  {paidAccess.daysLeft} {plural(paidAccess.daysLeft, DAYS)}
                 </strong>
                 . При удалении учётной записи он пропадёт. Если хотите вернуть деньги за
                 неиспользованный период, сделайте это{" "}

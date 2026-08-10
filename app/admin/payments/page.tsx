@@ -145,7 +145,39 @@ export default async function AdminPaymentsPage({
       {payments.length === 0 ? (
         <p className="mt-8 text-sm text-muted">За выбранный период платежей не было.</p>
       ) : (
-        <div className="mt-8 overflow-x-auto rounded-xl border border-border">
+        <>
+          {/* На телефоне шесть колонок не помещаются, и сумма со статусом
+              оказываются за краем экрана — там же, где их никто не найдёт.
+              Поэтому до sm то же самое показывается карточками. */}
+          <ul className="mt-8 space-y-3 sm:hidden">
+            {payments.map((payment) => (
+              <li
+                key={payment.id}
+                className="rounded-xl border border-border bg-background-elevated p-4 text-sm"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-base font-semibold">
+                    {payment.amount.toString()}{" "}
+                    {payment.currency === "RUB" ? "₽" : payment.currency}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {new Date(payment.createdAt).toLocaleString("ru-RU", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </span>
+                </div>
+                <p className="mt-2 [overflow-wrap:anywhere]">{payment.user.email}</p>
+                <p className="mt-1 text-xs text-muted">
+                  {PLAN_LABELS[payment.period as BillingPeriod]} ·{" "}
+                  {KIND_LABELS[payment.kind] ?? payment.kind} ·{" "}
+                  {STATUS_LABELS[payment.status] ?? payment.status}
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 hidden overflow-x-auto rounded-xl border border-border sm:block">
           <table className="w-full text-sm">
             <thead className="bg-background-elevated text-left text-muted">
               <tr>
@@ -186,7 +218,8 @@ export default async function AdminPaymentsPage({
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {pageCount > 1 && (
