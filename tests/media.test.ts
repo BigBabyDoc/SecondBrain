@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   checksumOf,
   detectType,
+  isConvertibleToWebp,
   markdownFor,
+  pickSmallerEncoding,
   storageKeyFor,
+  type EncodedAsset,
 } from "@/lib/media";
 
 const bytesOf = (...values: number[]) => new Uint8Array([...values, ...new Array(16).fill(0)]);
@@ -78,5 +81,52 @@ describe("markdownFor", () => {
 
   it("экранирует скобки в имени, чтобы не разваливалась разметка", () => {
     expect(markdownFor("image", "m3", "схема [2].png")).toBe("![схема 2.png](/api/media/m3)");
+  });
+});
+
+describe("isConvertibleToWebp", () => {
+  it("PNG и JPEG — кандидаты на пережатие", () => {
+    expect(isConvertibleToWebp("image/png")).toBe(true);
+    expect(isConvertibleToWebp("image/jpeg")).toBe(true);
+  });
+
+  it("GIF не трогаем — может быть анимированным", () => {
+    expect(isConvertibleToWebp("image/gif")).toBe(false);
+  });
+
+  it("PDF и уже готовый WebP конвертировать незачем", () => {
+    expect(isConvertibleToWebp("application/pdf")).toBe(false);
+    expect(isConvertibleToWebp("image/webp")).toBe(false);
+  });
+});
+
+describe("pickSmallerEncoding", () => {
+  const asset = (contentType: string, size: number): EncodedAsset => ({
+    contentType,
+    extension: contentType === "image/webp" ? "webp" : "png",
+    bytes: new Uint8Array(size),
+  });
+
+  it("берёт WebP, если он меньше оригинала", () => {
+    const original = asset("image/png", 1000);
+    const converted = asset("image/webp", 200);
+    expect(pickSmallerEncoding(original, converted)).toBe(converted);
+  });
+
+  it("оставляет оригинал, если WebP не меньше — экономия не должна быть отрицательной", () => {
+    const original = asset("image/png", 1000);
+    const converted = asset("image/webp", 1000);
+    expect(pickSmallerEncoding(original, converted)).toBe(original);
+  });
+
+  it("оставляет оригинал, если WebP даже больше", () => {
+    const original = asset("image/png", 1000);
+    const converted = asset("image/webp", 1200);
+    expect(pickSmallerEncoding(original, converted)).toBe(original);
+  });
+
+  it("без конвертированного варианта возвращает оригинал", () => {
+    const original = asset("image/png", 1000);
+    expect(pickSmallerEncoding(original, null)).toBe(original);
   });
 });

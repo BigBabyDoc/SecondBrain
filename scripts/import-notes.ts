@@ -1,9 +1,21 @@
 import "dotenv/config";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../app/generated/prisma/client";
-import { checksumOf, detectType, markdownFor, MAX_UPLOAD_BYTES, storageKeyFor, humanSize } from "../lib/media";
+import {
+  checksumOf,
+  detectType,
+  markdownFor,
+  MAX_UPLOAD_BYTES,
+  storageKeyFor,
+  humanSize,
+  isConvertibleToWebp,
+  pickSmallerEncoding,
+  type DetectedType,
+  type EncodedAsset,
+} from "../lib/media";
 import { collectEmbeds, excerptFrom, obsidianToMarkdown, readAliases } from "../lib/obsidian";
 import { slugify } from "../lib/slugify";
 import { parseTags } from "../lib/tags";
@@ -19,6 +31,12 @@ import type { Tier } from "../app/generated/prisma/client";
  * Заметки сопоставляются по slug (он считается из заголовка), поэтому повторный
  * запуск обновляет уже загруженные, а не плодит копии. Путь папок становится
  * тегами, автором — первый администратор.
+ *
+ * Растровые вложения (PNG, JPEG) на лету пережимаются в WebP — это кратно
+ * снижает исходящий трафик отдачи медиа. GIF (может быть анимированным) и PDF
+ * не трогаем. Если WebP-версия не оказалась меньше оригинала, в хранилище
+ * уходит оригинал — контрольная сумма и ключ хранения всегда считаются от тех
+ * байт, которые реально загружены.
  *
  * Флаги:
  *   --limit=<n>      взять только первые n заметок (по алфавиту пути)
@@ -117,6 +135,7 @@ async function main() {
 
   // Вложения заливаются до конвертации: она синхронная, а загрузка — нет.
   const uploads = new Map<string, string | null>();
+  const webpStats = { converted: 0, bytesSaved: 0 };
   for (const name of new Set(notes.flatMap((note) => collectEmbeds(note.source)))) {
     const key = name.normalize("NFC");
     if (uploads.has(key)) continue;
@@ -127,7 +146,7 @@ async function main() {
         ? attachments.has(key)
           ? `![${key}](/api/media/…)`
           : null
-        : await uploadAttachment(attachments.get(key), key, author.id)
+        : await uploadAttachment(attachments.get(key), key, author.id, webpStats)
     );
   }
 
@@ -184,6 +203,9 @@ async function main() {
 
   const attached = [...uploads.values()].filter(Boolean).length;
   console.log(`\nВложения: перенесено ${attached} из ${uploads.size}.`);
+  if (webpStats.converted > 0) {
+    console.log(`Пережато в WebP: ${webpStats.converted}, экономия ${humanSize(webpStats.bytesSaved)}.`);
+  }
 
   const lostEmbeds = [...new Set(droppedEmbeds)];
   if (lostEmbeds.length > 0) {
@@ -239,14 +261,35 @@ function paidSelection(arg: string, notes: SourceNote[]): Set<string> {
 }
 
 /**
+ * Пережимает PNG/JPEG в WebP, если это реально экономит место — решает
+ * pickSmallerEncoding (lib/media.ts), а этой функции остаётся только вызвать
+ * sharp и оформить результат в тот же вид, что и оригинал.
+ */
+async function encodeForStorage(detected: DetectedType, bytes: Buffer, name: string): Promise<EncodedAsset> {
+  const original: EncodedAsset = { contentType: detected.contentType, extension: detected.extension, bytes };
+  if (!isConvertibleToWebp(detected.contentType)) return original;
+
+  try {
+    const webpBytes = await sharp(bytes).webp({ quality: 82 }).toBuffer();
+    return pickSmallerEncoding(original, { contentType: "image/webp", extension: "webp", bytes: webpBytes });
+  } catch (error) {
+    console.warn(`     ! ${name}: не удалось пережать в WebP (${(error as Error).message}), оставляю оригинал`);
+    return original;
+  }
+}
+
+/**
  * Вложение проходит тот же путь, что и загрузка через /admin: тип по магическим
  * байтам, ключ хранения — sha256 содержимого. Повторный запуск и повторяющаяся
- * во многих заметках картинка дают один медиаобъект, а не копии.
+ * во многих заметках картинка дают один медиаобъект, а не копии. Контрольная
+ * сумма и ключ хранения считаются уже от пережатых байт — контентная адресация
+ * должна отражать то, что реально легло в хранилище.
  */
 async function uploadAttachment(
   file: string | undefined,
   name: string,
-  uploadedById: string
+  uploadedById: string,
+  webpStats: { converted: number; bytesSaved: number }
 ): Promise<string | null> {
   if (!file) return null;
 
@@ -256,24 +299,31 @@ async function uploadAttachment(
     return null;
   }
 
-  const bytes = await readFile(file);
-  const detected = detectType(bytes);
+  const original = await readFile(file);
+  const detected = detectType(original);
   if (!detected) {
     console.warn(`     ! ${name}: формат не поддерживается`);
     return null;
   }
 
+  const encoded = await encodeForStorage(detected, original, name);
+  if (encoded.contentType !== detected.contentType) {
+    webpStats.converted++;
+    webpStats.bytesSaved += original.byteLength - encoded.bytes.byteLength;
+  }
+  const bytes = encoded.bytes;
+
   const checksum = checksumOf(bytes);
   const existing = await prisma.mediaObject.findUnique({ where: { checksum } });
   if (existing) return markdownFor(detected.kind, existing.id, existing.originalName);
 
-  const storageKey = storageKeyFor(checksum, detected.extension);
-  await mediaStorage().put(storageKey, bytes, detected.contentType);
+  const storageKey = storageKeyFor(checksum, encoded.extension);
+  await mediaStorage().put(storageKey, Buffer.from(bytes), encoded.contentType);
 
   const media = await prisma.mediaObject.create({
     data: {
       checksum,
-      contentType: detected.contentType,
+      contentType: encoded.contentType,
       sizeBytes: bytes.byteLength,
       storageKey,
       originalName: name,

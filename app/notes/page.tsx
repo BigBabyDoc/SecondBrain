@@ -73,6 +73,9 @@ export default async function NotesPage({
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
+      // Карточка каталога показывает только эти поля — тело заметки (в среднем
+      // 14,7 КБ на строку) сюда не нужно, а без select оно вытягивалось целиком.
+      select: { id: true, slug: true, title: true, excerpt: true, tier: true, tags: true },
     }),
     prisma.note.count({ where }),
     // Облако тегов строится по всей библиотеке, а не по текущей странице.

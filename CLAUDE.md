@@ -31,10 +31,15 @@ npx prisma generate                    # REQUIRED before build/dev on a fresh cl
 npx prisma migrate dev --name <name>   # create + apply a migration locally
 npx prisma migrate deploy              # apply migrations (prod)
 npx prisma db seed                     # runs prisma/seed.ts via tsx; prints demo admin/doctor creds
+
+npm run mail:check                     # verify SMTP credentials without registering a user
+npm run notes:import -- <vault-path>   # import an Obsidian vault into the catalog (see below)
+npm run tags:normalize                 # one-off: bring existing tags to a single case
 ```
 
-Tests cover pure functions only (`lib/access`, `lib/tokens`, `lib/rate-limit`, `lib/slugify`) — there
-are no integration tests, so anything touching Prisma or NextAuth is verified by running the app.
+Tests cover pure functions only (`lib/access`, `lib/tokens`, `lib/rate-limit`, `lib/slugify`,
+`lib/search`, `lib/tags`, `lib/obsidian`, `lib/media`, `lib/renewal`, …) — there are no integration
+tests, so anything touching Prisma or NextAuth is verified by running the app.
 
 Copy `.env.example` to `.env` (`.env*` is gitignored). Beyond the database, auth and YooKassa keys it
 also carries `SMTP_*` / `MAIL_FROM` (unset ⇒ emails are printed to the server console instead of
@@ -73,6 +78,25 @@ paywall replaces locked content), and `app/sitemap.ts` lists every published not
 `force-dynamic` so notes added through the admin appear without a rebuild. Don't put the catalog
 behind a login; it is the acquisition funnel. Note bodies are Markdown, rendered by
 `components/markdown.tsx` (react-markdown + remark-gfm).
+
+**Catalog search and tags.** `/notes` filters by `?q=` (title, excerpt *and* body) and `?tag=`, with
+the tag cloud built from the whole library rather than the current page. On top of that,
+`components/note-search.tsx` fetches suggestions from `GET /api/search`: the field stays a plain
+`input` inside a form, so search still works without JavaScript; requests are debounced and the
+previous one aborted, because out-of-order responses would leave the list behind what is typed.
+
+The endpoint is public — the catalog is — and therefore returns **only title and excerpt, never a
+snippet of the body**: a fragment of a paid note would be a paywall leak around the server check in
+`app/notes/[slug]/page.tsx`. Ranking lives in `lib/search.ts` (`titleRank`: exact → prefix → word
+boundary → inside a word, shorter title wins on a tie). The word boundary is found by hand rather
+than with `\b`, which in JavaScript only counts Latin letters and would never fire on Russian titles.
+
+**Tags are free strings with a single case rule** (`lib/tags.ts`). `normalizeTag` upper-cases the
+first character and leaves the rest alone — lower-casing everything would turn medical abbreviations
+(«ОКИ», «ЖДА») into words — and `parseTags` dedupes case-insensitively, so «Отит» and «отит» cannot
+both reach the tag cloud as separate filters. Every writer goes through it: the admin actions, the
+seed and the Obsidian import. `npm run tags:normalize` is the one-off backfill for rows written
+before the rule existed.
 
 **Paywall is enforced server-side.** `app/notes/[slug]/page.tsx` is a server component that loads the
 note plus the viewer's subscription and only renders `note.content` when `hasTierAccess` passes —
@@ -180,6 +204,27 @@ inside existing notes. Objects never change, hence `Cache-Control: immutable`.
 `components/markdown.tsx` deliberately forwards only the props each element needs instead of
 spreading everything: react-markdown passes an AST `node` prop that leaks into the DOM as
 `node="[object Object]"` if spread.
+
+**Obsidian import.** The notes are authored in an Obsidian vault, so `npm run notes:import -- "<vault>"`
+(`scripts/import-notes.ts`) is the bulk path into the catalog; the admin UI stays the way single notes
+are edited. Flags: `--limit=<n>`, `--paid=none|half|all|"Название,…"`, `--skip-drafts` (files marked
+«Требует доработки»), `--prune` (delete previously imported notes missing from the set) and
+`--dry-run`. Notes are matched **by slug computed from the title**, so a second run updates what it
+already imported instead of duplicating it; the folder path becomes tags (through `parseTags`) and the
+first ADMIN user becomes the author. Unlike the admin CRUD, a slug collision is resolved with the
+folder name, not a timestamp — the same file must land on the same URL every run. Everything read from
+the filesystem is normalized to **NFC**, because macOS hands back NFD names and a wikilink written in
+NFC would then never find its note.
+
+`lib/obsidian.ts` is the pure half and the one to test against: Obsidian's syntax extensions are not
+Markdown and reach the site as raw brackets unless translated — wikilinks `[[Заметка]]` (resolved
+against the titles of the notes in the same run; unresolved ones degrade to plain text and are
+listed at the end), embeds `![[файл.png]]` and callouts `> [!Note]`, whose types are rendered with
+Russian labels. Embedded files are uploaded through the same content-addressed media path
+(`checksumOf` → `storageKeyFor`), so a picture reused in ten notes is stored once; an embed whose file
+is missing is dropped and reported rather than left as broken markup. The excerpt is derived from the
+converted body, falling back to the frontmatter alias and then to the section name — a note that is
+only a table of contents has no prose of its own.
 
 ## Relationship to the Java backend
 
