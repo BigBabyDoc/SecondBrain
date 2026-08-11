@@ -83,3 +83,32 @@ export function humanSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
+
+/**
+ * PNG и JPEG имеет смысл пережимать в WebP — на скриншотах клинических таблиц
+ * это даёт кратную экономию без заметной потери качества. GIF не трогаем: он
+ * может быть анимированным, а WebP-аниматор — отдельная история. PDF и уже
+ * готовый WebP конвертировать незачем.
+ */
+const WEBP_CONVERTIBLE_TYPES = new Set(["image/png", "image/jpeg"]);
+
+export function isConvertibleToWebp(contentType: string): boolean {
+  return WEBP_CONVERTIBLE_TYPES.has(contentType);
+}
+
+export type EncodedAsset = {
+  contentType: string;
+  extension: string;
+  bytes: Uint8Array;
+};
+
+/**
+ * Выбирает, что реально класть в хранилище: конвертированный вариант — только
+ * если он строго меньше оригинала. Экономия должна быть настоящей: на некоторых
+ * PNG (например, с большим количеством шума) WebP может проиграть в размере, и
+ * тогда лучше остаться на оригинале, чем сжечь CPU ради отрицательной экономии.
+ */
+export function pickSmallerEncoding(original: EncodedAsset, converted: EncodedAsset | null): EncodedAsset {
+  if (!converted) return original;
+  return converted.bytes.byteLength < original.bytes.byteLength ? converted : original;
+}
