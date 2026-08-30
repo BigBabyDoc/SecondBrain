@@ -35,6 +35,7 @@ npx prisma db seed                     # runs prisma/seed.ts via tsx; prints dem
 npm run mail:check                     # verify SMTP credentials without registering a user
 npm run notes:import -- <vault-path>   # import an Obsidian vault into the catalog (see below)
 npm run tags:normalize                 # one-off: bring existing tags to a single case
+npm run admin:grant -- <email…>        # grant the ADMIN role (there is no UI for it); --dry-run, --create
 ```
 
 Tests cover pure functions only (`lib/access`, `lib/tokens`, `lib/rate-limit`, `lib/slugify`,
